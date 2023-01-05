@@ -1,5 +1,4 @@
 import gymnasium as gym
-from gymnasium import spaces
 import numpy as np
 
 
@@ -10,88 +9,59 @@ class MfgEnv(gym.Env):
         # read this from json
         self.demand = 200
         self.duration = 100
+        self.num_cfgs = 5
+        self.cfgs_limit = 10
+        self.purchase_costs = np.array(
+            [[1000.0, 1500.0, 2000.0, 500.0, 5000.0]]
+        ).T  # in $
+        self.running_costs = np.array([[10.0, 15.0, 20.0, 5.0, 25.0]]).T  # in $
+        self.production_rates = np.array([[1, 1.5, 2, 0.25, 5]]).T  # per unit time
 
-        num_cfgs = 5
-        cfgs_limit = 10
-        purchase_costs = np.array([1000.0, 1500.0, 2000.0, 500.0, 5000.0])  # in $
-        running_costs = np.array([10.0, 15.0, 20.0, 5.0, 25.0])  # in $
-        production_rates = np.array([1, 1.5, 2, 0.25, 5])  # per unit time
-
-        # observation dictionary
-        self.obs_dict = {
-            "binary_map": np.zeros((num_cfgs, cfgs_limit)),
-            "total_produced": np.zeros((num_cfgs, cfgs_limit)),
-            "remaining_products": np.full((num_cfgs, cfgs_limit), self.demand),
-            "remaining_time": np.full((num_cfgs, cfgs_limit), self.duration),
-            "purchase_costs": np.repeat(
-                purchase_costs.reshape(-1, 1), cfgs_limit, axis=1
-            ),
-            "running_costs": np.repeat(
-                running_costs.reshape(-1, 1), cfgs_limit, axis=1
-            ),
-            "production_rates": np.repeat(
-                production_rates.reshape(-1, 1), cfgs_limit, axis=1
-            ),
-        }
-
-        # observation space is 7 by num_cfgs by cfgs_limit tensor
-        self.observation_space = spaces.Box(
-            low=0.0, high=np.inf, shape=(7, num_cfgs, cfgs_limit)
+        self.observation_space = gym.spaces.Dict(
+            {
+                "cfgs_mask": gym.spaces.MultiBinary((self.num_cfgs, self.cfgs_limit)),
+                "produced": gym.spaces.Box(
+                    low=0.0, high=10e6, shape=(self.num_cfgs, self.cfgs_limit)
+                ),
+            }
         )
 
         # action = self.num_cfgs: start/resume/continue production
         # 0 <= action < self.num_cfgs: buy configuration with index=action
-        self.action_space = spaces.Discrete(num_cfgs + 1)
+        self.action_space = gym.spaces.Discrete(self.num_cfgs + 1)
 
-    def _get_obs(self):
-        return self.obs_state
+    def _reset_initial_obs(self):
+        self.obs = {
+            "cfgs_mask": np.zeros((self.num_cfgs, self.cfgs_limit), dtype=np.float32),
+            "produced": np.zeros((self.num_cfgs, self.cfgs_limit), dtype=np.float32),
+        }
 
     def _get_info(self):
         return {"msg": "good luck!"}
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        return self._get_obs(), self._get_info()
+        self._reset_initial_obs()
+        self._time_step = 0
+
+        return self.obs, self._get_info()
 
     def step(self, action):
-        if action == len(self.available_configs):
-            # update remaining time
-            self.obs_dict["remaining_time"] -= 1
-
-            # update total produced
-            self.obs_dict["total_produced"] += (
-                self.obs_dict["binary_map"] * self.obs_dict["production_rates"]
-            )
-
-            # update remaining products
-            self.obs_dict["remainig_products"] = self.demand - sum(
-                self.obs_dict["total_produced"].astype(int)
-            )
+        if action == self.num_cfgs:
+            # produce products
+            self.obs["produced"] += self.obs["cfgs_mask"] * self.production_rates
+            self._time_step += 1
+            reward = -1.0 * np.sum(self.obs["cfgs_mask"] * self.running_costs)
         else:
             # buy new configuration and do not update time
-
-            # find non-zero index
-            cfg = self.available_configs[action]
-            idxs = np.where(cfg == 0)[0]
+            # find index with zero value
+            idxs = np.where(self.obs["cfgs_mask"][action] == 0)[0]
             if len(idxs) != 0:
-                idx = idxs[0][0]
-                self.available_configs[action, idx] = 1
+                self.obs["cfgs_mask"][action][idxs[0]] = 1
 
-                # reward = purchase cost
-            else:
-                # limit exceeded
-                # give some negative reward
-                pass
+            reward = -1.0 * self.purchase_costs[action][0]
 
-        obs = None
-        reward = 0
-        terminated = False
-        truncated = False
-        info = {}
-        return obs, reward, terminated, truncated, info
+        terminated = np.sum(self.obs["produced"].astype(int)) >= self.demand
+        truncated = self._time_step >= self.duration
 
-
-if __name__ == "__main__":
-    env = MfgEnv()
-    obs, info = env.reset(seed=42)
-    print(obs[5])
+        return self.obs, reward, terminated, truncated, self._get_info()
