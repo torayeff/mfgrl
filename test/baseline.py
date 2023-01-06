@@ -1,6 +1,8 @@
 import gymnasium as gym
 
-env = gym.make("mfgrl:mfgrl/MfgEnv-v0")
+import mfgrl
+
+env = gym.make("mfgrl/MfgEnv-v0")
 
 obs, info = env.reset(seed=42)
 total_reward = 0
