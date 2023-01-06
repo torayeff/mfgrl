@@ -32,41 +32,40 @@ if pygame.font:
     text = pygame.font.Font(None, 28).render(
         "Available configurations", True, (255, 255, 255)
     )
-    textpos = text.get_rect(x=50, y=75)
+    textpos = text.get_rect(x=50, y=50)
     background.blit(text, textpos)
 
-    # render configurations properties
-    font = pygame.font.Font(None, 24)
-    txt_x, txt_y = 60, 100
-    line_spacing = 25
-    for i in range(num_cfgs):
-        text = font.render(f"{'':>5} • Mfg-{i}:", True, (255, 255, 255))
-        textpos = text.get_rect(x=txt_x, y=txt_y)
-        background.blit(text, textpos)
-        txt_y += line_spacing
+    # Set the grid color
+    grid_color = (255, 255, 255)
 
-        text = font.render(
-            f"{'':>10} - Production rate: {production_rates[i][0]}",
-            True,
-            (255, 255, 255),
-        )
-        textpos = text.get_rect(x=txt_x, y=txt_y)
-        background.blit(text, textpos)
-        txt_y += line_spacing
+    # Set the grid cell size
+    cell_size = (50, 50)
 
-        text = font.render(
-            f"{'':>10} - Purchase cost: {purchase_costs[i][0]}", True, (255, 255, 255)
-        )
-        textpos = text.get_rect(x=txt_x, y=txt_y)
-        background.blit(text, textpos)
-        txt_y += line_spacing
+    # Set the grid dimensions
+    grid_dimensions = (3, 5)
 
-        text = font.render(
-            f"{'':>10} - Running cost: {running_costs[i][0]}", True, (255, 255, 255)
+    # Set the grid position
+    grid_position = (50, 100)
+
+    # Set the grid line thickness
+    line_thickness = 2
+
+    # Draw the grid lines
+    for x in range(grid_dimensions[0] + 1):
+        start_pos = (grid_position[0] + x * cell_size[0], grid_position[1])
+        end_pos = (
+            grid_position[0] + x * cell_size[0],
+            grid_position[1] + cell_size[1] * grid_dimensions[1],
         )
-        textpos = text.get_rect(x=txt_x, y=txt_y)
-        background.blit(text, textpos)
-        txt_y += line_spacing
+        pygame.draw.line(background, grid_color, start_pos, end_pos, line_thickness)
+
+    for y in range(grid_dimensions[1] + 1):
+        start_pos = (grid_position[0], grid_position[1] + y * cell_size[1])
+        end_pos = (
+            grid_position[0] + cell_size[0] * grid_dimensions[0],
+            grid_position[1] + y * cell_size[1],
+        )
+        pygame.draw.line(background, grid_color, start_pos, end_pos, line_thickness)
 
 
 screen.blit(background, (0, 0))
