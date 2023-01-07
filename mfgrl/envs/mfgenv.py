@@ -3,7 +3,7 @@ import numpy as np
 
 
 class MfgEnv(gym.Env):
-    def __init__(self, buffer_size):
+    def __init__(self, buffer_size=10):
         super().__init__()
 
         # max limit of configs
@@ -20,16 +20,16 @@ class MfgEnv(gym.Env):
         self.market_recurring_costs = np.array([10.0, 15.0, 20.0, 5.0, 25.0])
         self.market_production_rates = np.array([1, 1.5, 2, 0.25, 5])
         self.market_setup_times = np.array([5, 7.5, 9, 3.5, 10])
-        self.num_cfgs = len(self.purchase_costs)
+        self.num_cfgs = len(self.market_incurring_costs)
 
         # observation and action spaces
+        # TODO: encode/decode observation!!!
         self.observation_space = gym.spaces.Dict(
             {
                 # demand data
                 "demand": gym.spaces.Discrete(self.MAX_PRODUCTS),
                 "demand_time": gym.spaces.Discrete(self.MAX_TIME),
                 # available resources
-                "current_time": gym.spaces.Discrete(self.MAX_TIME),
                 "incurred_costs": gym.spaces.Box(
                     low=0.0, high=10e9, shape=(self.buffer_size,)
                 ),
@@ -90,7 +90,7 @@ class MfgEnv(gym.Env):
             "market_setup_times": self.market_setup_times,
         }
 
-        return self.obs, {}
+        return self.obs, self._get_info()
 
     def step(self, action):
         if (0 <= action < self.num_cfgs) and (self.buffer_idx < self.buffer_size):
@@ -144,7 +144,7 @@ class MfgEnv(gym.Env):
         )
 
         # produce products with ready configurations
-        self.obs["produced_count"] += (
+        self.obs["produced_counts"] += (
             self.obs["cfgs_status"].astype(int) * self.obs["production_rates"]
         )
 
@@ -152,7 +152,7 @@ class MfgEnv(gym.Env):
         # update only ready or being prepared cfgs
         updates = np.ceil(self.obs["cfgs_status"])
         # add small eps to deal with 0.999999xxx
-        progress = 1 / self.obs["setup_times"] + 1e-9
+        progress = [1 / st + 1e-9 if st != 0 else 0 for st in self.obs["setup_times"]]
         self.obs["cfgs_status"] = np.clip(
             self.obs["cfgs_status"] + updates * progress, a_min=0, a_max=1
         )
@@ -164,3 +164,6 @@ class MfgEnv(gym.Env):
         self.obs["demand_time"] -= 1
 
         return reward
+
+    def _get_info(self):
+        return {}
