@@ -2,8 +2,8 @@ import gymnasium as gym
 import numpy as np
 import random
 
-np.random.seed(42)
-random.seed(42)
+np.random.seed(4242)
+random.seed(4242)
 
 env = gym.make(
     "mfgrl:mfgrl/MfgEnv-v0",
