@@ -7,10 +7,11 @@ import seaborn as sns
 class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, buffer_size=10, render_mode=None):
+    def __init__(self, buffer_size=10, stochastic_market=False, render_mode=None):
         super().__init__()
 
         self.buffer_size = buffer_size
+        self.stochastic_market = stochastic_market
         self.render_mode = render_mode
 
         if self.render_mode == "human":
@@ -22,7 +23,7 @@ class MfgEnv(gym.Env):
         self.MAX_PRODUCTS = int(10e9)
 
         # read this from json
-        self.demand = 200
+        self.demand = 2000
         self.demand_time = 100
         self.market_incurring_costs = np.array([1000.0, 1500.0, 2000.0, 500.0, 5000.0])
         self.market_recurring_costs = np.array([10.0, 15.0, 20.0, 5.0, 25.0])
@@ -90,6 +91,9 @@ class MfgEnv(gym.Env):
         if terminated or truncated:
             plt.show(block=True)
             plt.close("all")
+
+        if self.stochastic_market:
+            self._update_market()
 
         return (
             self._get_obs(),
@@ -162,6 +166,54 @@ class MfgEnv(gym.Env):
 
         return reward
 
+    def _update_market(self):
+        # change -+10%
+        # clip between -+20% of initial costs
+
+        # incurring costs
+        self._env_state["market_incurring_costs"] += np.random.uniform(
+            low=-0.1 * self._env_state["market_incurring_costs"],
+            high=0.1 * self._env_state["market_incurring_costs"],
+        )
+        self._env_state["market_incurring_costs"] = np.clip(
+            self._env_state["market_incurring_costs"],
+            a_min=self.market_incurring_costs - 0.2 * self.market_incurring_costs,
+            a_max=self.market_incurring_costs + 0.2 * self.market_incurring_costs,
+        )
+
+        # recurring costs
+        self._env_state["market_recurring_costs"] += np.random.uniform(
+            low=-0.1 * self._env_state["market_recurring_costs"],
+            high=0.1 * self._env_state["market_recurring_costs"],
+        )
+        self._env_state["market_recurring_costs"] = np.clip(
+            self._env_state["market_recurring_costs"],
+            a_min=self.market_recurring_costs - 0.2 * self.market_recurring_costs,
+            a_max=self.market_recurring_costs + 0.2 * self.market_recurring_costs,
+        )
+
+        # production rates
+        self._env_state["market_production_rates"] += np.random.uniform(
+            low=-0.1 * self._env_state["market_production_rates"],
+            high=0.1 * self._env_state["market_production_rates"],
+        )
+        self._env_state["market_production_rates"] = np.clip(
+            self._env_state["market_production_rates"],
+            a_min=self.market_production_rates - 0.2 * self.market_production_rates,
+            a_max=self.market_production_rates + 0.2 * self.market_production_rates,
+        )
+
+        # setup times
+        self._env_state["market_setup_times"] += np.random.uniform(
+            low=-0.1 * self._env_state["market_setup_times"],
+            high=0.1 * self._env_state["market_setup_times"],
+        )
+        self._env_state["market_setup_times"] = np.clip(
+            self._env_state["market_setup_times"],
+            a_min=self.market_setup_times - 0.2 * self.market_setup_times,
+            a_max=self.market_setup_times + 0.2 * self.market_setup_times,
+        )
+
     def encode_obs(self, obs):
         return np.concatenate(
             (
@@ -232,8 +284,8 @@ class MfgEnv(gym.Env):
         fig, axes = plt.subplots(6, 2, figsize=(10, 7))
         palette = sns.color_palette()
 
-        text_kwargs = dict(ha="center", va="center", fontsize=14, color=palette[3])
         # remaining demand and time
+        text_kwargs = dict(ha="center", va="center", fontsize=14)
         axes[0, 0].text(
             0.5,
             0.5,
@@ -245,12 +297,14 @@ class MfgEnv(gym.Env):
         axes[0, 0].grid(False)
 
         # cost
+        text_kwargs = dict(ha="center", va="center", fontsize=12)
         action = kwargs["action"]
         reward = kwargs["reward"]
         axes[1, 0].text(
             0.5,
             0.5,
-            f"Action: {action}. Cost: {reward}. Total cost: {-1.0 * self.total_reward}",
+            f"Action: {action}. Step cost: {-reward:.1f}."
+            f" Total cost: {-1.0 * self.total_reward:.1f}",
             **text_kwargs,
         )
         axes[1, 0].set_yticklabels([])
@@ -294,7 +348,7 @@ class MfgEnv(gym.Env):
         # plot produced counts
         axes[1, 1].bar(buffer_idxs, data["produced_counts"], color=palette[0])
         axes[1, 1].set_ylabel("unit")
-        axes[1, 1].set_ylim(bottom=0)
+        axes[1, 1].set_ylim([0, self.demand + 1])
         axes[1, 1].set_xticklabels([])
         axes[1, 1].set_title("Production (buffer)")
 

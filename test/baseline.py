@@ -5,7 +5,7 @@ import random
 np.random.seed(42)
 random.seed(42)
 
-env = gym.make("mfgrl:mfgrl/MfgEnv-v0", render_mode="human")
+env = gym.make("mfgrl:mfgrl/MfgEnv-v0", stochastic_market=True, render_mode="human")
 obs, info = env.reset(seed=42)
 
 total_reward = 0
