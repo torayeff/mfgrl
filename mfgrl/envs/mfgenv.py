@@ -1,10 +1,10 @@
 import json
+from typing import Tuple
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from typing import Tuple
 
 
 class MfgEnv(gym.Env):
