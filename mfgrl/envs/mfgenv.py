@@ -300,30 +300,26 @@ class MfgEnv(gym.Env):
         self.demand_time = data["demand_time"]
         self.num_cfgs = len(data["configurations"])
 
-        self.market_incurring_costs = []
-        self.market_recurring_costs = []
-        self.market_production_rates = []
-        self.market_setup_times = []
-        self.market_up_times = []
+        self.market_incurring_costs = np.array([], dtype=np.float32)
+        self.market_recurring_costs = np.array([], dtype=np.float32)
+        self.market_production_rates = np.array([], dtype=np.float32)
+        self.market_setup_times = np.array([], dtype=np.float32)
+        self.market_up_times = np.array([], dtype=np.float32)
 
-        for k, v in data["configurations"].items():
-            self.market_incurring_costs.append(v["incurring_cost"])
-            self.market_recurring_costs.append(v["recurring_cost"])
-            self.market_production_rates.append(v["production_rate"])
-            self.market_setup_times.append(v["setup_time"])
-            self.market_up_times.append(v["up_time"])
-
-        self.market_incurring_costs = np.array(
-            self.market_incurring_costs, dtype=np.float32
-        )
-        self.market_recurring_costs = np.array(
-            self.market_recurring_costs, dtype=np.float32
-        )
-        self.market_production_rates = np.array(
-            self.market_production_rates, dtype=np.float32
-        )
-        self.market_setup_times = np.array(self.market_setup_times, dtype=np.float32)
-        self.market_up_times = np.array(self.market_up_times, dtype=np.float32)
+        for v in data["configurations"].values():
+            self.market_incurring_costs = np.append(
+                self.market_incurring_costs, v["incurring_cost"]
+            )
+            self.market_recurring_costs = np.append(
+                self.market_recurring_costs, v["recurring_cost"]
+            )
+            self.market_production_rates = np.append(
+                self.market_production_rates, v["production_rate"]
+            )
+            self.market_setup_times = np.append(
+                self.market_setup_times, v["setup_time"]
+            )
+            self.market_up_times = np.append(self.market_up_times, v["up_time"])
 
     def _render_frame(self, **kwargs):
         plt.close()
