@@ -302,7 +302,7 @@ class MfgEnv(gym.Env):
         axes[2, 1].bar(buffer_idxs, data["incurred_costs"], color=palette[3])
         axes[2, 1].set_ylabel("h")
         axes[2, 1].set_xticklabels([])
-        axes[2, 1].set_title("Incurred costs")
+        axes[2, 1].set_title("Incurred costs (buffer)")
 
         # plot recurring costs
         axes[3, 1].bar(buffer_idxs, data["recurring_costs"], color=palette[4])
