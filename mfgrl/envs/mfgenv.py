@@ -11,17 +11,23 @@ class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
     def __init__(
-        self, data_file: str, stochastic: bool = False, render_mode: str = None
+        self,
+        data_file: str,
+        scale_costs: bool = True,
+        stochastic: bool = False,
+        render_mode: str = None,
     ):
         """Initialize
 
         Args:
             data_file (str): The data file location.
+            scale_costs (book, optional): Whether to scale the costs. Defaults to True.
             stochastic (bool, optional): Stochastic environment. Defaults to False.
             render_mode (str, optional): Render mode. Defaults to None.
         """
         super().__init__()
 
+        self.scale_costs = scale_costs
         self.stochastic = stochastic
         self.render_mode = render_mode
 
@@ -184,7 +190,7 @@ class MfgEnv(gym.Env):
         # increment buffer idx
         self.buffer_idx += 1
 
-        return reward
+        return reward * self.tradeoff
 
     def continue_production(self) -> float:
         """Continues production.
@@ -222,7 +228,7 @@ class MfgEnv(gym.Env):
         )
         self._env_state["demand_time"] -= 1
 
-        return reward
+        return reward * (1 - self.tradeoff)
 
     def encode_obs(self, obs: dict) -> np.ndarray:
         """Encodes observation dictionary into vector.
@@ -390,6 +396,9 @@ class MfgEnv(gym.Env):
         self.buffer_size = 10
         self.demand = data["demand"]
         self.demand_time = data["demand_time"]
+        self.max_incurring_cost = data["max_incurring_cost"]
+        self.max_recurring_cost = data["max_recurring_cost"]
+        self.tradeoff = data["tradeoff"]
         self.num_cfgs = len(data["configurations"])
 
         self.market_incurring_costs = np.array([], dtype=np.float32)
@@ -409,6 +418,14 @@ class MfgEnv(gym.Env):
             )
             self.market_setup_times = np.append(
                 self.market_setup_times, v["setup_time"]
+            )
+
+        if self.scale_costs:
+            self.market_incurring_costs = (
+                self.market_incurring_costs / self.max_incurring_cost
+            )
+            self.market_recurring_costs = (
+                self.market_recurring_costs / self.max_recurring_cost
             )
 
     def _render_frame(self, **kwargs):
