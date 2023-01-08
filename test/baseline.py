@@ -12,10 +12,7 @@ total_reward = 0
 count = 0
 while True:
 
-    if count <= 5:
-        action = np.random.randint(0, env.action_space.n)
-    else:
-        action = 5
+    action = np.random.randint(0, env.action_space.n)
 
     obs, reward, terminated, truncated, info = env.step(action)
     total_reward += reward
