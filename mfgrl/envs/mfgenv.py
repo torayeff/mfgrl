@@ -1,3 +1,5 @@
+import json
+
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,10 +9,9 @@ import seaborn as sns
 class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, buffer_size=10, stochastic_market=False, render_mode=None):
+    def __init__(self, data_file, stochastic_market=False, render_mode=None):
         super().__init__()
 
-        self.buffer_size = buffer_size
         self.stochastic_market = stochastic_market
         self.render_mode = render_mode
 
@@ -18,21 +19,10 @@ class MfgEnv(gym.Env):
             sns.set()
             plt.ion()
 
-        # hard limits
-        self.MAX_TIME = int(10e9)
-        self.MAX_PRODUCTS = int(10e9)
-
-        # read this from json
-        self.demand = 2000
-        self.demand_time = 100
-        self.market_incurring_costs = np.array([1000.0, 1500.0, 2000.0, 500.0, 5000.0])
-        self.market_recurring_costs = np.array([10.0, 15.0, 20.0, 5.0, 25.0])
-        self.market_production_rates = np.array([1, 1.5, 2, 0.25, 5])
-        self.market_setup_times = np.array([5, 7.5, 9, 3.5, 10])
-        self.num_cfgs = len(self.market_incurring_costs)
+        self._setup_data(data_file)
 
         # observation and action spaces
-        obs_dim = 2 + self.buffer_size * 6 + self.num_cfgs * 4
+        obs_dim = 2 + self.buffer_size * 7 + self.num_cfgs * 5
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,)
         )
@@ -57,6 +47,7 @@ class MfgEnv(gym.Env):
             "recurring_costs": np.zeros(self.buffer_size, dtype=np.float32),
             "production_rates": np.zeros(self.buffer_size, dtype=np.float32),
             "setup_times": np.zeros(self.buffer_size, dtype=np.float32),
+            "up_times": np.zeros(self.buffer_size, dtype=np.float32),
             "cfgs_status": np.zeros(self.buffer_size, dtype=np.float32),
             "produced_counts": np.zeros(self.buffer_size, dtype=np.float32),
             # market data
@@ -64,10 +55,13 @@ class MfgEnv(gym.Env):
             "market_recurring_costs": self.market_recurring_costs,
             "market_production_rates": self.market_production_rates,
             "market_setup_times": self.market_setup_times,
+            "market_up_times": self.market_up_times,
         }
 
         if self.render_mode == "human":
             self._render_frame(action=-1, reward=0)
+        else:
+            print(self._env_state)
 
         return self._get_obs(), self._get_info()
 
@@ -122,6 +116,10 @@ class MfgEnv(gym.Env):
 
         self._env_state["setup_times"][self.buffer_idx] = self._env_state[
             "market_setup_times"
+        ][cfg_id]
+
+        self._env_state["up_times"][self.buffer_idx] = self._env_state[
+            "market_up_times"
         ][cfg_id]
 
         self._env_state["cfgs_status"][self.buffer_idx] = (
@@ -214,6 +212,17 @@ class MfgEnv(gym.Env):
             a_max=self.market_setup_times + 0.2 * self.market_setup_times,
         )
 
+        # setup up_times
+        self._env_state["market_up_times"] += np.random.uniform(
+            low=-0.1 * self._env_state["market_up_times"],
+            high=0.1 * self._env_state["market_up_times"],
+        )
+        self._env_state["market_up_times"] = np.clip(
+            self._env_state["market_up_times"],
+            a_min=self.market_up_times - 0.2 * self.market_up_times,
+            a_max=self.market_up_times + 0.2 * self.market_up_times,
+        )
+
     def encode_obs(self, obs):
         return np.concatenate(
             (
@@ -222,12 +231,14 @@ class MfgEnv(gym.Env):
                 obs["recurring_costs"],
                 obs["production_rates"],
                 obs["setup_times"],
+                obs["up_times"],
                 obs["cfgs_status"],
                 obs["produced_counts"],
                 obs["market_incurring_costs"],
                 obs["market_recurring_costs"],
                 obs["market_production_rates"],
                 obs["market_setup_times"],
+                obs["market_up_times"],
             )
         ).astype(np.float32)
 
@@ -249,6 +260,9 @@ class MfgEnv(gym.Env):
         obs_dict["setup_times"] = obs_vec[start : start + self.buffer_size]
 
         start += self.buffer_size
+        obs_dict["up_times"] = obs_vec[start : start + self.buffer_size]
+
+        start += self.buffer_size
         obs_dict["cfgs_status"] = obs_vec[start : start + self.buffer_size]
 
         start += self.buffer_size
@@ -266,6 +280,9 @@ class MfgEnv(gym.Env):
         start += self.num_cfgs
         obs_dict["market_setup_times"] = obs_vec[start : start + self.num_cfgs]
 
+        start += self.num_cfgs
+        obs_dict["market_up_times"] = obs_vec[start : start + self.num_cfgs]
+
         return obs_dict
 
     def _get_obs(self):
@@ -273,6 +290,40 @@ class MfgEnv(gym.Env):
 
     def _get_info(self):
         return {}
+
+    def _setup_data(self, data_file):
+        with open(data_file, "r") as f:
+            data = json.load(f)
+
+        self.buffer_size = 10
+        self.demand = data["demand"]
+        self.demand_time = data["demand_time"]
+        self.num_cfgs = len(data["configurations"])
+
+        self.market_incurring_costs = []
+        self.market_recurring_costs = []
+        self.market_production_rates = []
+        self.market_setup_times = []
+        self.market_up_times = []
+
+        for k, v in data["configurations"].items():
+            self.market_incurring_costs.append(v["incurring_cost"])
+            self.market_recurring_costs.append(v["recurring_cost"])
+            self.market_production_rates.append(v["production_rate"])
+            self.market_setup_times.append(v["setup_time"])
+            self.market_up_times.append(v["up_time"])
+
+        self.market_incurring_costs = np.array(
+            self.market_incurring_costs, dtype=np.float32
+        )
+        self.market_recurring_costs = np.array(
+            self.market_recurring_costs, dtype=np.float32
+        )
+        self.market_production_rates = np.array(
+            self.market_production_rates, dtype=np.float32
+        )
+        self.market_setup_times = np.array(self.market_setup_times, dtype=np.float32)
+        self.market_up_times = np.array(self.market_up_times, dtype=np.float32)
 
     def _render_frame(self, **kwargs):
         plt.close()
