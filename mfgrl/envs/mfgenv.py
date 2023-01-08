@@ -1,13 +1,21 @@
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 
 class MfgEnv(gym.Env):
-    def __init__(self, buffer_size=10):
+    metadata = {"render_modes": ["human"]}
+
+    def __init__(self, buffer_size=10, render_mode=None):
         super().__init__()
 
-        # max limit of configs
         self.buffer_size = buffer_size
+        self.render_mode = render_mode
+
+        if self.render_mode == "human":
+            sns.set()
+            plt.ion()
 
         # hard limits
         self.MAX_TIME = int(10e9)
@@ -32,6 +40,9 @@ class MfgEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
+        # total reward
+        self.total_reward = 0
+
         # reset buffer
         self.buffer_idx = 0
 
@@ -54,6 +65,9 @@ class MfgEnv(gym.Env):
             "market_setup_times": self.market_setup_times,
         }
 
+        if self.render_mode == "human":
+            self._render_frame(action=-1, reward=0)
+
         return self._get_obs(), self._get_info()
 
     def step(self, action):
@@ -68,7 +82,22 @@ class MfgEnv(gym.Env):
         if truncated:
             reward = -10e6
 
-        return self._get_obs(), reward, terminated, truncated, self._get_info()
+        self.total_reward += reward
+
+        if self.render_mode == "human":
+            self._render_frame(action=action, reward=reward)
+
+        if terminated or truncated:
+            plt.show(block=True)
+            plt.close("all")
+
+        return (
+            self._get_obs(),
+            reward,
+            terminated,
+            truncated,
+            self._get_info(),
+        )
 
     def buy_cfg(self, cfg_id):
         # calculate reward
@@ -192,3 +221,109 @@ class MfgEnv(gym.Env):
 
     def _get_info(self):
         return {}
+
+    def _render_frame(self, **kwargs):
+        plt.close()
+
+        data = self._env_state
+
+        buffer_idxs = [f"B{i}" for i in range(self.buffer_size)]
+        market_cfgs = [f"Mfg{i}" for i in range(self.num_cfgs)]
+        fig, axes = plt.subplots(6, 2, figsize=(10, 7))
+        palette = sns.color_palette()
+
+        text_kwargs = dict(ha="center", va="center", fontsize=14, color=palette[3])
+        # remaining demand and time
+        axes[0, 0].text(
+            0.5,
+            0.5,
+            f"Demand: {data['demand']}. Time: {data['demand_time']}",
+            **text_kwargs,
+        )
+        axes[0, 0].set_yticklabels([])
+        axes[0, 0].set_xticklabels([])
+        axes[0, 0].grid(False)
+
+        # cost
+        action = kwargs["action"]
+        reward = kwargs["reward"]
+        axes[1, 0].text(
+            0.5,
+            0.5,
+            f"Action: {action}. Cost: {reward}. Total cost: {-1.0 * self.total_reward}",
+            **text_kwargs,
+        )
+        axes[1, 0].set_yticklabels([])
+        axes[1, 0].set_xticklabels([])
+        axes[1, 0].grid(False)
+
+        # plot incurred costs
+        axes[2, 0].bar(market_cfgs, data["market_incurring_costs"], color=palette[3])
+        axes[2, 0].set_ylabel("$")
+        axes[2, 0].set_xticklabels([])
+        axes[2, 0].set_title("Incurring costs (market)")
+
+        # plot recurring costs
+        axes[3, 0].bar(market_cfgs, data["market_recurring_costs"], color=palette[4])
+        axes[3, 0].set_ylabel("kWh")
+        axes[3, 0].set_xticklabels([])
+        axes[3, 0].set_title("Recurring costs (market)")
+
+        # plot production rates
+        axes[4, 0].bar(market_cfgs, data["market_production_rates"], color=palette[5])
+        axes[4, 0].set_ylabel("p/h")
+        axes[4, 0].set_xticklabels([])
+        axes[4, 0].set_title("Production rates (market)")
+
+        # plot setup times
+        axes[5, 0].bar(market_cfgs, data["market_setup_times"], color=palette[6])
+        axes[5, 0].set_ylabel("h")
+        axes[5, 0].set_title("Setup times (market)")
+        axes[5, 0].set_xlabel("Available configs.")
+
+        # plot cfgs statuses
+        progress_colors = [
+            palette[2] if p == 1 else palette[1] for p in data["cfgs_status"]
+        ]
+        axes[0, 1].bar(buffer_idxs, data["cfgs_status"] * 100, color=progress_colors)
+        axes[0, 1].set_ylabel("%")
+        axes[0, 1].set_ylim([0, 100])
+        axes[0, 1].set_xticklabels([])
+        axes[0, 1].set_title("Configurations status (buffer)")
+
+        # plot produced counts
+        axes[1, 1].bar(buffer_idxs, data["produced_counts"], color=palette[0])
+        axes[1, 1].set_ylabel("unit")
+        axes[1, 1].set_ylim(bottom=0)
+        axes[1, 1].set_xticklabels([])
+        axes[1, 1].set_title("Production (buffer)")
+
+        # plot incurred costs
+        axes[2, 1].bar(buffer_idxs, data["incurred_costs"], color=palette[3])
+        axes[2, 1].set_ylabel("h")
+        axes[2, 1].set_xticklabels([])
+        axes[2, 1].set_title("Incurred costs")
+
+        # plot recurring costs
+        axes[3, 1].bar(buffer_idxs, data["recurring_costs"], color=palette[4])
+        axes[3, 1].set_ylabel("kWh")
+        axes[3, 1].set_xticklabels([])
+        axes[3, 1].set_title("Recurring costs (buffer)")
+
+        # plot production rates
+        axes[4, 1].bar(buffer_idxs, data["production_rates"], color=palette[5])
+        axes[4, 1].set_ylabel("p/h")
+        axes[4, 1].set_xticklabels([])
+        axes[4, 1].set_title("Production rates (buffer)")
+
+        # plot setup times
+        axes[5, 1].bar(buffer_idxs, data["setup_times"], color=palette[6])
+        axes[5, 1].set_ylabel("h")
+        axes[5, 1].set_title("Setup times (buffer)")
+        axes[5, 1].set_xlabel("Available buffer")
+
+        plt.tight_layout()
+
+        fig.suptitle("Manufacturing Environment")
+        fig.canvas.draw()
+        fig.canvas.flush_events()
