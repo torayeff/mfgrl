@@ -8,7 +8,7 @@ random.seed(42)
 env = gym.make(
     "mfgrl:mfgrl/MfgEnv-v0",
     data_file="data.json",
-    stochastic_market=not True,
+    stochastic=True,
     render_mode="human",
 )
 obs, info = env.reset(seed=42)
