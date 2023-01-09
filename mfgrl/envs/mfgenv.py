@@ -31,10 +31,6 @@ class MfgEnv(gym.Env):
         self.stochastic = stochastic
         self.render_mode = render_mode
 
-        if self.render_mode == "human":
-            sns.set()
-            plt.ion()
-
         self._setup_data(data_file)
 
         # observation and action spaces
@@ -86,6 +82,9 @@ class MfgEnv(gym.Env):
         }
 
         if self.render_mode == "human":
+            sns.set()
+            self.fig, self.axes = plt.subplots(6, 2, figsize=(10, 7))
+            self.fig.suptitle("Manufacturing Environment")
             self._render_frame(action=-1, reward=0)
         else:
             print(self._env_state)
@@ -430,110 +429,117 @@ class MfgEnv(gym.Env):
 
     def _render_frame(self, **kwargs):
         """Renders one step of environment."""
-        plt.close()
+        for ax in self.axes.flatten():
+            ax.clear()
 
         data = self._env_state
 
         buffer_idxs = [f"B{i}" for i in range(self.buffer_size)]
         market_cfgs = [f"Mfg{i}" for i in range(self.num_cfgs)]
-        fig, axes = plt.subplots(6, 2, figsize=(10, 7))
         palette = sns.color_palette()
 
         # remaining demand and time
         text_kwargs = dict(ha="center", va="center", fontsize=12)
-        axes[0, 0].text(
+        self.axes[0, 0].text(
             0.5,
             0.5,
             f"Remaining demand: {data['demand']}."
             f"Remaining time: {data['demand_time']}",
             **text_kwargs,
         )
-        axes[0, 0].set_yticklabels([])
-        axes[0, 0].set_xticklabels([])
-        axes[0, 0].grid(False)
+        self.axes[0, 0].set_yticklabels([])
+        self.axes[0, 0].set_xticklabels([])
+        self.axes[0, 0].grid(False)
 
         # cost
         text_kwargs = dict(ha="center", va="center", fontsize=12)
         action = kwargs["action"]
         reward = kwargs["reward"]
-        axes[1, 0].text(
+        self.axes[1, 0].text(
             0.5,
             0.5,
             f"Action: {action}. Step cost: {-reward:.1f}."
             f" Total cost: {-1.0 * self.total_reward:.1f}",
             **text_kwargs,
         )
-        axes[1, 0].set_yticklabels([])
-        axes[1, 0].set_xticklabels([])
-        axes[1, 0].grid(False)
+        self.axes[1, 0].set_yticklabels([])
+        self.axes[1, 0].set_xticklabels([])
+        self.axes[1, 0].grid(False)
 
         # plot incurred costs
-        axes[2, 0].bar(market_cfgs, data["market_incurring_costs"], color=palette[3])
-        axes[2, 0].set_ylabel("$")
-        axes[2, 0].set_xticklabels([])
-        axes[2, 0].set_title("Incurring costs (market)")
+        self.axes[2, 0].bar(
+            market_cfgs, data["market_incurring_costs"], color=palette[3]
+        )
+        self.axes[2, 0].set_ylabel("$")
+        self.axes[2, 0].set_xticklabels([])
+        self.axes[2, 0].set_title("Incurring costs (market)")
 
         # plot recurring costs
-        axes[3, 0].bar(market_cfgs, data["market_recurring_costs"], color=palette[4])
-        axes[3, 0].set_ylabel("kWh")
-        axes[3, 0].set_xticklabels([])
-        axes[3, 0].set_title("Recurring costs (market)")
+        self.axes[3, 0].bar(
+            market_cfgs, data["market_recurring_costs"], color=palette[4]
+        )
+        self.axes[3, 0].set_ylabel("kWh")
+        self.axes[3, 0].set_xticklabels([])
+        self.axes[3, 0].set_title("Recurring costs (market)")
 
         # plot production rates
-        axes[4, 0].bar(market_cfgs, data["market_production_rates"], color=palette[5])
-        axes[4, 0].set_ylabel("p/h")
-        axes[4, 0].set_xticklabels([])
-        axes[4, 0].set_title("Production rates (market)")
+        self.axes[4, 0].bar(
+            market_cfgs, data["market_production_rates"], color=palette[5]
+        )
+        self.axes[4, 0].set_ylabel("p/h")
+        self.axes[4, 0].set_xticklabels([])
+        self.axes[4, 0].set_title("Production rates (market)")
 
         # plot setup times
-        axes[5, 0].bar(market_cfgs, data["market_setup_times"], color=palette[6])
-        axes[5, 0].set_ylabel("h")
-        axes[5, 0].set_title("Setup times (market)")
-        axes[5, 0].set_xlabel("Available configs.")
+        self.axes[5, 0].bar(market_cfgs, data["market_setup_times"], color=palette[6])
+        self.axes[5, 0].set_ylabel("h")
+        self.axes[5, 0].set_title("Setup times (market)")
+        self.axes[5, 0].set_xlabel("Available configs.")
 
         # plot cfgs statuses
         progress_colors = [
             palette[2] if p == 1 else palette[1] for p in data["cfgs_status"]
         ]
-        axes[0, 1].bar(buffer_idxs, data["cfgs_status"] * 100, color=progress_colors)
-        axes[0, 1].set_ylabel("%")
-        axes[0, 1].set_ylim([0, 100])
-        axes[0, 1].set_xticklabels([])
-        axes[0, 1].set_title("Configurations status (buffer)")
+        self.axes[0, 1].bar(
+            buffer_idxs, data["cfgs_status"] * 100, color=progress_colors
+        )
+        self.axes[0, 1].set_ylabel("%")
+        self.axes[0, 1].set_ylim([0, 100])
+        self.axes[0, 1].set_xticklabels([])
+        self.axes[0, 1].set_title("Configurations status (buffer)")
 
         # plot produced counts
-        axes[1, 1].bar(buffer_idxs, data["produced_counts"], color=palette[0])
-        axes[1, 1].set_ylabel("unit")
-        axes[1, 1].set_ylim(bottom=0)
-        axes[1, 1].set_xticklabels([])
-        axes[1, 1].set_title("Production (buffer)")
+        self.axes[1, 1].bar(buffer_idxs, data["produced_counts"], color=palette[0])
+        self.axes[1, 1].set_ylabel("unit")
+        self.axes[1, 1].set_ylim(bottom=0)
+        self.axes[1, 1].set_xticklabels([])
+        self.axes[1, 1].set_title("Production (buffer)")
 
         # plot incurred costs
-        axes[2, 1].bar(buffer_idxs, data["incurred_costs"], color=palette[3])
-        axes[2, 1].set_ylabel("h")
-        axes[2, 1].set_xticklabels([])
-        axes[2, 1].set_title("Incurred costs (buffer)")
+        self.axes[2, 1].bar(buffer_idxs, data["incurred_costs"], color=palette[3])
+        self.axes[2, 1].set_ylabel("h")
+        self.axes[2, 1].set_xticklabels([])
+        self.axes[2, 1].set_title("Incurred costs (buffer)")
 
         # plot recurring costs
-        axes[3, 1].bar(buffer_idxs, data["recurring_costs"], color=palette[4])
-        axes[3, 1].set_ylabel("kWh")
-        axes[3, 1].set_xticklabels([])
-        axes[3, 1].set_title("Recurring costs (buffer)")
+        self.axes[3, 1].bar(buffer_idxs, data["recurring_costs"], color=palette[4])
+        self.axes[3, 1].set_ylabel("kWh")
+        self.axes[3, 1].set_xticklabels([])
+        self.axes[3, 1].set_title("Recurring costs (buffer)")
 
         # plot production rates
-        axes[4, 1].bar(buffer_idxs, data["production_rates"], color=palette[5])
-        axes[4, 1].set_ylabel("p/h")
-        axes[4, 1].set_xticklabels([])
-        axes[4, 1].set_title("Production rates (buffer)")
+        self.axes[4, 1].bar(buffer_idxs, data["production_rates"], color=palette[5])
+        self.axes[4, 1].set_ylabel("p/h")
+        self.axes[4, 1].set_xticklabels([])
+        self.axes[4, 1].set_title("Production rates (buffer)")
 
         # plot setup times
-        axes[5, 1].bar(buffer_idxs, data["setup_times"], color=palette[6])
-        axes[5, 1].set_ylabel("h")
-        axes[5, 1].set_title("Setup times (buffer)")
-        axes[5, 1].set_xlabel("Available buffer")
+        self.axes[5, 1].bar(buffer_idxs, data["setup_times"], color=palette[6])
+        self.axes[5, 1].set_ylabel("h")
+        self.axes[5, 1].set_title("Setup times (buffer)")
+        self.axes[5, 1].set_xlabel("Available buffer")
 
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
         plt.tight_layout()
-
-        fig.suptitle("Manufacturing Environment")
-        fig.canvas.draw()
-        fig.canvas.flush_events()
+        plt.pause(0.1)
