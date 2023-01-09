@@ -468,7 +468,8 @@ class MfgEnv(gym.Env):
         self.axes[2, 0].bar(
             market_cfgs, self._env_state["market_incurring_costs"], color=palette[3]
         )
-        self.axes[2, 0].set_ylabel("$")
+        self.axes[2, 0].set_ylabel("£")
+        self.axes[2, 0].set_ylim((0, 1))
         self.axes[2, 0].set_xticklabels([])
         self.axes[2, 0].set_title("Incurring costs (market)")
 
@@ -477,6 +478,7 @@ class MfgEnv(gym.Env):
             market_cfgs, self._env_state["market_recurring_costs"], color=palette[4]
         )
         self.axes[3, 0].set_ylabel("kWh")
+        self.axes[3, 0].set_ylim((0, 1))
         self.axes[3, 0].set_xticklabels([])
         self.axes[3, 0].set_title("Recurring costs (market)")
 
@@ -521,7 +523,8 @@ class MfgEnv(gym.Env):
         self.axes[2, 1].bar(
             buffer_idxs, self._env_state["incurred_costs"], color=palette[3]
         )
-        self.axes[2, 1].set_ylabel("h")
+        self.axes[2, 1].set_ylabel("£")
+        self.axes[2, 1].set_ylim((0, 1))
         self.axes[2, 1].set_xticklabels([])
         self.axes[2, 1].set_title("Incurred costs (buffer)")
 
@@ -530,6 +533,7 @@ class MfgEnv(gym.Env):
             buffer_idxs, self._env_state["recurring_costs"], color=palette[4]
         )
         self.axes[3, 1].set_ylabel("kWh")
+        self.axes[3, 1].set_ylim((0, 1))
         self.axes[3, 1].set_xticklabels([])
         self.axes[3, 1].set_title("Recurring costs (buffer)")
 
