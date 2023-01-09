@@ -93,7 +93,7 @@ class MfgEnv(gym.Env):
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """Performs one step in environment.
-        The environment time updates only if 0 <= action < self.num_cfgs
+        The environment time updates only if action == self.num_cfgs
 
         If the environment is truncated high negative reward is returned.
 
@@ -152,7 +152,7 @@ class MfgEnv(gym.Env):
         reward = -1.0 * self._env_state["market_incurring_costs"][cfg_id]
 
         # buy new configuration
-        # update incrred costs
+        # update inucrred costs
         self._env_state["incurred_costs"][self.buffer_idx] = self._env_state[
             "market_incurring_costs"
         ][cfg_id]
