@@ -162,7 +162,7 @@ class MfgEnv(gym.Env):
             "market_recurring_costs"
         ][cfg_id]
         self._static_state["recurring_costs"][self.buffer_idx] = self._env_state[
-            "market_production_rates"
+            "market_recurring_costs"
         ][cfg_id]
 
         # update production rates
@@ -432,8 +432,6 @@ class MfgEnv(gym.Env):
         for ax in self.axes.flatten():
             ax.clear()
 
-        data = self._env_state
-
         buffer_idxs = [f"B{i}" for i in range(self.buffer_size)]
         market_cfgs = [f"Mfg{i}" for i in range(self.num_cfgs)]
         palette = sns.color_palette()
@@ -443,8 +441,8 @@ class MfgEnv(gym.Env):
         self.axes[0, 0].text(
             0.5,
             0.5,
-            f"Remaining demand: {data['demand']}."
-            f"Remaining time: {data['demand_time']}",
+            f"Remaining demand: {self._env_state['demand']}."
+            f"Remaining time: {self._env_state['demand_time']}",
             **text_kwargs,
         )
         self.axes[0, 0].set_yticklabels([])
@@ -468,7 +466,7 @@ class MfgEnv(gym.Env):
 
         # plot incurred costs
         self.axes[2, 0].bar(
-            market_cfgs, data["market_incurring_costs"], color=palette[3]
+            market_cfgs, self._env_state["market_incurring_costs"], color=palette[3]
         )
         self.axes[2, 0].set_ylabel("$")
         self.axes[2, 0].set_xticklabels([])
@@ -476,7 +474,7 @@ class MfgEnv(gym.Env):
 
         # plot recurring costs
         self.axes[3, 0].bar(
-            market_cfgs, data["market_recurring_costs"], color=palette[4]
+            market_cfgs, self._env_state["market_recurring_costs"], color=palette[4]
         )
         self.axes[3, 0].set_ylabel("kWh")
         self.axes[3, 0].set_xticklabels([])
@@ -484,24 +482,26 @@ class MfgEnv(gym.Env):
 
         # plot production rates
         self.axes[4, 0].bar(
-            market_cfgs, data["market_production_rates"], color=palette[5]
+            market_cfgs, self._env_state["market_production_rates"], color=palette[5]
         )
         self.axes[4, 0].set_ylabel("p/h")
         self.axes[4, 0].set_xticklabels([])
         self.axes[4, 0].set_title("Production rates (market)")
 
         # plot setup times
-        self.axes[5, 0].bar(market_cfgs, data["market_setup_times"], color=palette[6])
+        self.axes[5, 0].bar(
+            market_cfgs, self._env_state["market_setup_times"], color=palette[6]
+        )
         self.axes[5, 0].set_ylabel("h")
         self.axes[5, 0].set_title("Setup times (market)")
         self.axes[5, 0].set_xlabel("Available configs.")
 
         # plot cfgs statuses
         progress_colors = [
-            palette[2] if p == 1 else palette[1] for p in data["cfgs_status"]
+            palette[2] if p == 1 else palette[1] for p in self._env_state["cfgs_status"]
         ]
         self.axes[0, 1].bar(
-            buffer_idxs, data["cfgs_status"] * 100, color=progress_colors
+            buffer_idxs, self._env_state["cfgs_status"] * 100, color=progress_colors
         )
         self.axes[0, 1].set_ylabel("%")
         self.axes[0, 1].set_ylim([0, 100])
@@ -509,32 +509,42 @@ class MfgEnv(gym.Env):
         self.axes[0, 1].set_title("Configurations status (buffer)")
 
         # plot produced counts
-        self.axes[1, 1].bar(buffer_idxs, data["produced_counts"], color=palette[0])
+        self.axes[1, 1].bar(
+            buffer_idxs, self._env_state["produced_counts"], color=palette[0]
+        )
         self.axes[1, 1].set_ylabel("unit")
         self.axes[1, 1].set_ylim(bottom=0)
         self.axes[1, 1].set_xticklabels([])
         self.axes[1, 1].set_title("Production (buffer)")
 
         # plot incurred costs
-        self.axes[2, 1].bar(buffer_idxs, data["incurred_costs"], color=palette[3])
+        self.axes[2, 1].bar(
+            buffer_idxs, self._env_state["incurred_costs"], color=palette[3]
+        )
         self.axes[2, 1].set_ylabel("h")
         self.axes[2, 1].set_xticklabels([])
         self.axes[2, 1].set_title("Incurred costs (buffer)")
 
         # plot recurring costs
-        self.axes[3, 1].bar(buffer_idxs, data["recurring_costs"], color=palette[4])
+        self.axes[3, 1].bar(
+            buffer_idxs, self._env_state["recurring_costs"], color=palette[4]
+        )
         self.axes[3, 1].set_ylabel("kWh")
         self.axes[3, 1].set_xticklabels([])
         self.axes[3, 1].set_title("Recurring costs (buffer)")
 
         # plot production rates
-        self.axes[4, 1].bar(buffer_idxs, data["production_rates"], color=palette[5])
+        self.axes[4, 1].bar(
+            buffer_idxs, self._env_state["production_rates"], color=palette[5]
+        )
         self.axes[4, 1].set_ylabel("p/h")
         self.axes[4, 1].set_xticklabels([])
         self.axes[4, 1].set_title("Production rates (buffer)")
 
         # plot setup times
-        self.axes[5, 1].bar(buffer_idxs, data["setup_times"], color=palette[6])
+        self.axes[5, 1].bar(
+            buffer_idxs, self._env_state["setup_times"], color=palette[6]
+        )
         self.axes[5, 1].set_ylabel("h")
         self.axes[5, 1].set_title("Setup times (buffer)")
         self.axes[5, 1].set_xlabel("Available buffer")
