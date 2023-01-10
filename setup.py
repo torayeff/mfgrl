@@ -3,5 +3,12 @@ from setuptools import setup
 setup(
     name="mfgrl",
     version="0.0.1",
-    install_requires=["gymnasium", "numpy", "matplotlib", "seaborn"],
+    install_requires=[
+        "gymnasium",
+        "numpy",
+        "matplotlib",
+        "seaborn",
+        "ray[rllib]",
+        "torch",
+    ],
 )
