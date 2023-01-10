@@ -15,6 +15,7 @@ obs, info = env.reset(seed=42)
 
 total_reward = 0
 count = 0
+max_production_action = np.argmax(env.decode_obs(obs)["market_production_rates"])
 while True:
     count += 1
 
@@ -23,7 +24,8 @@ while True:
         action = env.action_space.n
     else:
         # buy randomly until the buffer is full
-        action = np.random.randint(0, env.action_space.n - 1)
+        # action = np.random.randint(0, env.action_space.n - 1)
+        action = max_production_action
     obs, reward, terminated, truncated, info = env.step(action)
 
     print(f"i={count}, a={action}, r={reward}, term={terminated}, info={info}")

@@ -447,6 +447,15 @@ class MfgEnv(gym.Env):
                 self.market_recurring_costs / self.MAX_RECURRING_COST
             )
 
+        # sanity check whether the problem is feasible
+        idx = np.argmax(self.market_production_rates)
+        assert (
+            self.DEMAND_TIME - self.market_setup_times[idx]
+        ) * self.market_production_rates[idx] * self.BUFFER_SIZE > self.DEMAND, (
+            "Problem is not feasible. "
+            "Demand will not be satisfied even in the best case."
+        )
+
     def _render_frame(self, **kwargs):
         """Renders one step of environment."""
         for ax in self.axes.flatten():
