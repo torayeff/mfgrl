@@ -34,11 +34,11 @@ class MfgEnv(gym.Env):
         self._setup_data(data_file)
 
         # observation and action spaces
-        obs_dim = 2 + self.buffer_size * 6 + self.num_cfgs * 4
+        obs_dim = 2 + self.BUFFER_SIZE * 6 + self.NUM_CFGS * 4
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,)
         )
-        self.action_space = gym.spaces.Discrete(self.num_cfgs + 1)
+        self.action_space = gym.spaces.Discrete(self.NUM_CFGS + 1)
 
     def reset(self, seed: int = None, options: dict = None) -> Tuple[np.ndarray, dict]:
         """Resets environment.
@@ -51,8 +51,10 @@ class MfgEnv(gym.Env):
         """
         super().reset(seed=seed)
 
+        self.episode_steps = 0
+
         # total reward
-        self.total_reward = 0
+        self.total_mfg_cost = 0
 
         # reset buffer
         self.buffer_idx = 0
@@ -60,15 +62,15 @@ class MfgEnv(gym.Env):
         # reset environment state
         self._env_state = {
             # demand data
-            "demand": self.demand,
-            "demand_time": self.demand_time,
+            "demand": self.DEMAND,
+            "demand_time": self.DEMAND_TIME,
             # available resources data
-            "incurred_costs": np.zeros(self.buffer_size, dtype=np.float32),
-            "recurring_costs": np.zeros(self.buffer_size, dtype=np.float32),
-            "production_rates": np.zeros(self.buffer_size, dtype=np.float32),
-            "setup_times": np.zeros(self.buffer_size, dtype=np.float32),
-            "cfgs_status": np.zeros(self.buffer_size, dtype=np.float32),
-            "produced_counts": np.zeros(self.buffer_size, dtype=np.float32),
+            "incurred_costs": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "recurring_costs": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "production_rates": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "setup_times": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "cfgs_status": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "produced_counts": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             # market data
             "market_incurring_costs": self.market_incurring_costs,
             "market_recurring_costs": self.market_recurring_costs,
@@ -77,8 +79,8 @@ class MfgEnv(gym.Env):
         }
         # static state are used for stochastic operations
         self._static_state = {
-            "recurring_costs": np.zeros(self.buffer_size, dtype=np.float32),
-            "production_rates": np.zeros(self.buffer_size, dtype=np.float32),
+            "recurring_costs": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
+            "production_rates": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
         }
 
         if self.render_mode == "human":
@@ -93,7 +95,7 @@ class MfgEnv(gym.Env):
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """Performs one step in environment.
-        The environment time updates only if action == self.num_cfgs
+        The environment time updates only if action == self.NUM_CFGS
 
         If the environment is truncated high negative reward is returned.
 
@@ -104,18 +106,28 @@ class MfgEnv(gym.Env):
             Tuple[np.ndarray, float, bool, bool, dict]:
                 Observation, reward, terminated, truncated, info.
         """
-        if (0 <= action < self.num_cfgs) and (self.buffer_idx < self.buffer_size):
+        if (0 <= action < self.NUM_CFGS) and (self.buffer_idx < self.BUFFER_SIZE):
             reward = self.buy_cfg(cfg_id=action)
         else:
             reward = self.continue_production()
+        self.total_mfg_cost += reward
 
-        terminated = self._env_state["demand"] <= 0
-        truncated = self._env_state["demand_time"] <= 0
-
-        if truncated:
+        self.episode_steps += 1
+        truncated, terminated = False, False
+        if (
+            (self.episode_steps == self.MAX_EPISODE_STEPS)
+            or (self._env_state["demand_time"] == 0)
+        ) and (self._env_state["demand"] > 0):
+            truncated = True
             reward = -10e6
 
-        self.total_reward += reward
+        if (
+            (self._env_state["demand"] <= 0)
+            and (self._env_state["demand_time"] >= 0)
+            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
+        ):
+            terminated = True
+            reward = 10e6
 
         if self.render_mode == "human":
             self._render_frame(action=action, reward=reward)
@@ -189,7 +201,7 @@ class MfgEnv(gym.Env):
         # increment buffer idx
         self.buffer_idx += 1
 
-        return reward * self.tradeoff
+        return reward * self.TRADEOFF
 
     def continue_production(self) -> float:
         """Continues production.
@@ -222,12 +234,12 @@ class MfgEnv(gym.Env):
         )
 
         # update observation
-        self._env_state["demand"] = self.demand - np.sum(
+        self._env_state["demand"] = self.DEMAND - np.sum(
             self._env_state["produced_counts"].astype(int)
         )
         self._env_state["demand_time"] -= 1
 
-        return reward * (1 - self.tradeoff)
+        return reward * (1 - self.TRADEOFF)
 
     def encode_obs(self, obs: dict) -> np.ndarray:
         """Encodes observation dictionary into vector.
@@ -268,34 +280,34 @@ class MfgEnv(gym.Env):
         obs_dict["demand_time"] = obs_vec[1]
 
         start = 2
-        obs_dict["incurred_costs"] = obs_vec[start : start + self.buffer_size]
+        obs_dict["incurred_costs"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["recurring_costs"] = obs_vec[start : start + self.buffer_size]
+        start += self.BUFFER_SIZE
+        obs_dict["recurring_costs"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["production_rates"] = obs_vec[start : start + self.buffer_size]
+        start += self.BUFFER_SIZE
+        obs_dict["production_rates"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["setup_times"] = obs_vec[start : start + self.buffer_size]
+        start += self.BUFFER_SIZE
+        obs_dict["setup_times"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["cfgs_status"] = obs_vec[start : start + self.buffer_size]
+        start += self.BUFFER_SIZE
+        obs_dict["cfgs_status"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["produced_counts"] = obs_vec[start : start + self.buffer_size]
+        start += self.BUFFER_SIZE
+        obs_dict["produced_counts"] = obs_vec[start : start + self.BUFFER_SIZE]
 
-        start += self.buffer_size
-        obs_dict["market_incurring_costs"] = obs_vec[start : start + self.num_cfgs]
+        start += self.BUFFER_SIZE
+        obs_dict["market_incurring_costs"] = obs_vec[start : start + self.NUM_CFGS]
 
-        start += self.num_cfgs
-        obs_dict["market_recurring_costs"] = obs_vec[start : start + self.num_cfgs]
+        start += self.NUM_CFGS
+        obs_dict["market_recurring_costs"] = obs_vec[start : start + self.NUM_CFGS]
 
-        start += self.num_cfgs
-        obs_dict["market_production_rates"] = obs_vec[start : start + self.num_cfgs]
+        start += self.NUM_CFGS
+        obs_dict["market_production_rates"] = obs_vec[start : start + self.NUM_CFGS]
 
-        start += self.num_cfgs
-        obs_dict["market_setup_times"] = obs_vec[start : start + self.num_cfgs]
+        start += self.NUM_CFGS
+        obs_dict["market_setup_times"] = obs_vec[start : start + self.NUM_CFGS]
 
         return obs_dict
 
@@ -392,13 +404,15 @@ class MfgEnv(gym.Env):
         with open(data_file, "r") as f:
             data = json.load(f)
 
-        self.buffer_size = 10
-        self.demand = data["demand"]
-        self.demand_time = data["demand_time"]
-        self.max_incurring_cost = data["max_incurring_cost"]
-        self.max_recurring_cost = data["max_recurring_cost"]
-        self.tradeoff = data["tradeoff"]
-        self.num_cfgs = len(data["configurations"])
+        # constants
+        self.BUFFER_SIZE = 10
+        self.DEMAND = data["demand"]
+        self.DEMAND_TIME = data["demand_time"]
+        self.MAX_INCURRING_COST = data["max_incurring_cost"]
+        self.MAX_RECURRING_COST = data["max_recurring_cost"]
+        self.TRADEOFF = data["tradeoff"]
+        self.NUM_CFGS = len(data["configurations"])
+        self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
         self.market_incurring_costs = np.array([], dtype=np.float32)
         self.market_recurring_costs = np.array([], dtype=np.float32)
@@ -421,10 +435,10 @@ class MfgEnv(gym.Env):
 
         if self.scale_costs:
             self.market_incurring_costs = (
-                self.market_incurring_costs / self.max_incurring_cost
+                self.market_incurring_costs / self.MAX_INCURRING_COST
             )
             self.market_recurring_costs = (
-                self.market_recurring_costs / self.max_recurring_cost
+                self.market_recurring_costs / self.MAX_RECURRING_COST
             )
 
     def _render_frame(self, **kwargs):
@@ -432,8 +446,8 @@ class MfgEnv(gym.Env):
         for ax in self.axes.flatten():
             ax.clear()
 
-        buffer_idxs = [f"B{i}" for i in range(self.buffer_size)]
-        market_cfgs = [f"Mfg{i}" for i in range(self.num_cfgs)]
+        buffer_idxs = [f"B{i}" for i in range(self.BUFFER_SIZE)]
+        market_cfgs = [f"Mfg{i}" for i in range(self.NUM_CFGS)]
         palette = sns.color_palette()
 
         # remaining demand and time
@@ -456,8 +470,8 @@ class MfgEnv(gym.Env):
         self.axes[1, 0].text(
             0.5,
             0.5,
-            f"Action: {action}. Step cost: {-reward:.1f}."
-            f" Total cost: {-1.0 * self.total_reward:.1f}",
+            f"Action: {action}. Step reward: {reward:.2f}. "
+            f" Total cost: {-1.0 * self.total_mfg_cost:.2f}",
             **text_kwargs,
         )
         self.axes[1, 0].set_yticklabels([])
