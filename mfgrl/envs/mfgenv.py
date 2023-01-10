@@ -54,7 +54,7 @@ class MfgEnv(gym.Env):
         self.episode_steps = 0
 
         # total reward
-        self.total_mfg_cost = 0
+        self.total_rewards = 0
 
         # reset buffer
         self.buffer_idx = 0
@@ -88,17 +88,11 @@ class MfgEnv(gym.Env):
             self.fig, self.axes = plt.subplots(6, 2, figsize=(10, 7))
             self.fig.suptitle("Manufacturing Environment")
             self._render_frame(action=-1, reward=0)
-        else:
-            print(self._env_state)
 
         return self._get_obs(), self._get_info()
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """Performs one step in environment.
-        The environment time updates only if action == self.NUM_CFGS
-
-        If the environment is truncated high negative reward is returned.
-
         Args:
             action (int): Action index.
 
@@ -106,48 +100,59 @@ class MfgEnv(gym.Env):
             Tuple[np.ndarray, float, bool, bool, dict]:
                 Observation, reward, terminated, truncated, info.
         """
-        if (0 <= action < self.NUM_CFGS) and (self.buffer_idx < self.BUFFER_SIZE):
-            reward = self.buy_cfg(cfg_id=action)
+        assert 0 <= action <= self.BUFFER_SIZE, "Invalid action"
+
+        terminated = False
+        if action < self.NUM_CFGS:
+            if self.buffer_idx < self.BUFFER_SIZE:
+                info = {"msg": f"Decision step. Purchase cfg: {action}"}
+                reward = self.buy_cfg(cfg_id=action)
+            else:
+                info = {"msg": "Terminated. Tried to purchase when the buffer is full!"}
+                reward = self.PENALTY
+                terminated = True
         else:
+            info = {"msg": "Continuing production"}
             reward = self.continue_production()
-        self.total_mfg_cost += reward
 
-        self.episode_steps += 1
-        truncated, terminated = False, False
-        if (
-            (self.episode_steps == self.MAX_EPISODE_STEPS)
-            or (self._env_state["demand_time"] == 0)
-        ) and (self._env_state["demand"] > 0):
-            truncated = True
-            reward = -10e6
-
-        if (
-            (self._env_state["demand"] <= 0)
-            and (self._env_state["demand_time"] >= 0)
-            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
-        ):
-            terminated = True
-            reward = 10e6
-
-        if self.render_mode == "human":
-            self._render_frame(action=action, reward=reward)
-        else:
-            print(self._env_state)
-
-        if terminated or truncated:
-            plt.show(block=True)
-            plt.close("all")
-
+        # update environment
         if self.stochastic:
             self._imitate_market_uncertainties()
             self._imitate_production_uncertainties()
+
+        # check for possible terminations after environment update
+        if not terminated:
+            if (self._env_state["demand"] > 0) and (
+                (self._env_state["demand_time"] <= 0)
+                or (self.episode_steps >= self.MAX_EPISODE_STEPS)
+            ):
+                # demand was not satisfied within given time limits
+                info = {"msg": "Demand was not satisfied."}
+                reward = self.PENALTY
+                terminated = True
+            elif (
+                (self._env_state["demand"] <= 0)
+                and (self._env_state["demand_time"] >= 0)
+                and (self.episode_steps <= self.MAX_EPISODE_STEPS)
+            ):
+                info = {"msg": "Demand is satisfied"}
+                terminated = True
+
+        self.total_rewards += reward
+
+        # render
+        if self.render_mode == "human":
+            self._render_frame(action=action, reward=reward)
+            if terminated:
+                plt.show(block=True)
+                plt.close("all")
 
         return (
             self._get_obs(),
             reward,
             terminated,
-            truncated,
-            self._get_info(),
+            False,
+            info,
         )
 
     def buy_cfg(self, cfg_id: int) -> float:
@@ -412,6 +417,7 @@ class MfgEnv(gym.Env):
         self.MAX_RECURRING_COST = data["max_recurring_cost"]
         self.TRADEOFF = data["tradeoff"]
         self.NUM_CFGS = len(data["configurations"])
+        self.PENALTY = data["penalty"]
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
         self.market_incurring_costs = np.array([], dtype=np.float32)
@@ -455,7 +461,7 @@ class MfgEnv(gym.Env):
         self.axes[0, 0].text(
             0.5,
             0.5,
-            f"Remaining demand: {self._env_state['demand']}."
+            f"Remaining demand: {self._env_state['demand']}. "
             f"Remaining time: {self._env_state['demand_time']}",
             **text_kwargs,
         )
@@ -471,7 +477,7 @@ class MfgEnv(gym.Env):
             0.5,
             0.5,
             f"Action: {action}. Step reward: {reward:.2f}. "
-            f" Total cost: {-1.0 * self.total_mfg_cost:.2f}",
+            f" Total rewards: {self.total_rewards:.2f}",
             **text_kwargs,
         )
         self.axes[1, 0].set_yticklabels([])
