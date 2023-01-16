@@ -134,6 +134,7 @@ class MfgEnv(gym.Env):
                 and (self.episode_steps <= self.MAX_EPISODE_STEPS)
             ):
                 info = {"msg": "Demand is satisfied"}
+                reward = self.BONUS
                 terminated = True
 
         self.total_rewards += reward
@@ -416,6 +417,7 @@ class MfgEnv(gym.Env):
         self.TRADEOFF = data["tradeoff"]
         self.NUM_CFGS = len(data["configurations"])
         self.PENALTY = data["penalty"]
+        self.BONUS = data["bonus"]
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
         self.market_incurring_costs = np.array([], dtype=np.float32)
