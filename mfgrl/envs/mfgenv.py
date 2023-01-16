@@ -17,8 +17,10 @@ class MfgEnv(gym.Env):
             env_config (dict): The configuration dictionary.
                     It must have the following keys and values:
                     data_file (str): The data file location.
-                    scale_costs (book, optional): Whether to scale the costs. Defaults to True.
-                    stochastic (bool, optional): Stochastic environment. Defaults to False.
+                    scale_costs (book, optional): Whether to scale the costs.
+                                                  Defaults to True.
+                    stochastic (bool, optional): Stochastic environment.
+                                                 Defaults to False.
                     render_mode (str, optional): Render mode. Defaults to None.
         """
         super().__init__()
