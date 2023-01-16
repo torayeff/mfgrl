@@ -8,7 +8,7 @@ random.seed(4242)
 env_config = {
     "data_file": "data.json",
     "scale_costs": True,
-    "stochastic": True,
+    "stochastic": False,
     "render_mode": "human",
 }
 env = gym.make("mfgrl:mfgrl/MfgEnv-v0", env_config=env_config)
