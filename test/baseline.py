@@ -5,12 +5,13 @@ import random
 np.random.seed(4242)
 random.seed(4242)
 
-env = gym.make(
-    "mfgrl:mfgrl/MfgEnv-v0",
-    data_file="data.json",
-    stochastic=True,
-    render_mode="human",
-)
+env_config = {
+    "data_file": "data.json",
+    "scale_costs": True,
+    "stochastic": True,
+    "render_mode": "human",
+}
+env = gym.make("mfgrl:mfgrl/MfgEnv-v0", env_config=env_config)
 obs, info = env.reset(seed=42)
 
 total_reward = 0
