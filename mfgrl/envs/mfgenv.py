@@ -10,28 +10,24 @@ import seaborn as sns
 class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(
-        self,
-        data_file: str,
-        scale_costs: bool = True,
-        stochastic: bool = False,
-        render_mode: str = None,
-    ):
-        """Initialize
+    def __init__(self, env_config: dict):
+        """Initialize the environment.
 
         Args:
-            data_file (str): The data file location.
-            scale_costs (book, optional): Whether to scale the costs. Defaults to True.
-            stochastic (bool, optional): Stochastic environment. Defaults to False.
-            render_mode (str, optional): Render mode. Defaults to None.
+            env_config (dict): The configuration dictionary.
+                    It must have the following keys and values:
+                    data_file (str): The data file location.
+                    scale_costs (book, optional): Whether to scale the costs. Defaults to True.
+                    stochastic (bool, optional): Stochastic environment. Defaults to False.
+                    render_mode (str, optional): Render mode. Defaults to None.
         """
         super().__init__()
 
-        self.scale_costs = scale_costs
-        self.stochastic = stochastic
-        self.render_mode = render_mode
+        self.scale_costs = env_config["scale_costs"]
+        self.stochastic = env_config["stochastic"]
+        self.render_mode = env_config["render_mode"]
 
-        self._setup_data(data_file)
+        self._setup_data(env_config["data_file"])
 
         # observation and action spaces
         obs_dim = 2 + self.BUFFER_SIZE * 6 + self.NUM_CFGS * 4
