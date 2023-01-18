@@ -13,6 +13,9 @@ env_config = {
 }
 env = gym.make("mfgrl:mfgrl/MfgEnv-v0", env_config=env_config)
 obs, info = env.reset(seed=42)
+print("Start state".center(100, "-"))
+for k, v in env.decode_obs(obs).items():
+    print(k, v)
 
 total_reward = 0
 count = 0
@@ -25,13 +28,17 @@ while True:
         action = env.action_space.n
     else:
         # buy randomly until the buffer is full
-        # action = np.random.randint(0, env.action_space.n - 1)
         action = max_production_action
     obs, reward, terminated, truncated, info = env.step(action)
-
-    print(f"i={count}, a={action}, r={reward}, term={terminated}, info={info}")
-    print(env.decode_obs(obs))
     total_reward += reward
+
+    print("".center(100, "-"))
+    print(
+        f"i={count}, a={action}, r={reward}, term={terminated}, info={info}, "
+        f"tr={total_reward}"
+    )
+    for k, v in env.decode_obs(obs).items():
+        print(k, v)
     if terminated:
         break
 
