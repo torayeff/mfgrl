@@ -4,8 +4,7 @@
   "demand_time": 100,
   "max_incurring_cost": 10000.0,
   "max_recurring_cost": 100,
-  "tradeoff": 0.5,
-  "penalty": -1000,
+  "penalty": 1100,
   "bonus": 100,
   "configurations": {
     "Mfg0": {

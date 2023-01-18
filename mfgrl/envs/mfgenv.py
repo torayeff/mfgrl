@@ -130,7 +130,9 @@ class MfgEnv(gym.Env):
             ):
                 # demand was not satisfied within given time limits
                 info = {"msg": "Demand was not satisfied."}
-                reward = self.PENALTY
+                # TODO: Document
+                # remaining_demand * k + max_possible_cost <= initial_demand * k
+                reward = -1.0 * self.PENALTY * self._env_state["demand"]
                 terminated = True
             elif (
                 (self._env_state["demand"] <= 0)
@@ -138,7 +140,6 @@ class MfgEnv(gym.Env):
                 and (self.episode_steps <= self.MAX_EPISODE_STEPS)
             ):
                 info = {"msg": "Demand is satisfied"}
-                reward = self.BONUS
                 terminated = True
 
         self.total_rewards += reward
@@ -209,7 +210,7 @@ class MfgEnv(gym.Env):
         # increment buffer idx
         self.buffer_idx += 1
 
-        return reward * self.TRADEOFF
+        return reward
 
     def continue_production(self) -> float:
         """Continues production.
@@ -247,7 +248,7 @@ class MfgEnv(gym.Env):
         )
         self._env_state["demand_time"] -= 1
 
-        return reward * (1 - self.TRADEOFF)
+        return reward
 
     def encode_obs(self, obs: dict) -> np.ndarray:
         """Encodes observation dictionary into vector.
@@ -418,7 +419,6 @@ class MfgEnv(gym.Env):
         self.DEMAND_TIME = data["demand_time"]
         self.MAX_INCURRING_COST = data["max_incurring_cost"]
         self.MAX_RECURRING_COST = data["max_recurring_cost"]
-        self.TRADEOFF = data["tradeoff"]
         self.NUM_CFGS = len(data["configurations"])
         self.PENALTY = data["penalty"]
         self.BONUS = data["bonus"]

@@ -24,8 +24,8 @@ if __name__ == "__main__":
     )
 
     stop = {
-        "training_iteration": 50,
-        "timesteps_total": 10e6,
+        "training_iteration": 100,
+        "timesteps_total": 1e6,
         "episode_reward_mean": 90,
     }
 

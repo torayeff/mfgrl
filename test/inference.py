@@ -2,7 +2,7 @@ import gymnasium as gym
 from ray.rllib.algorithms.algorithm import Algorithm
 
 # load algorithm
-checkpoint_path = "C:/Users/ezzat2/ray_results/PPO/PPO_MfgEnv_dbc27_00000_0_2023-01-18_11-25-49/checkpoint_000110"
+checkpoint_path = "C:/Users/ezzat2/ray_results/PPO/PPO_MfgEnv_2e110_00000_0_2023-01-18_13-01-10/checkpoint_000100"
 algo = Algorithm.from_checkpoint(checkpoint_path)
 
 # prepare environment
