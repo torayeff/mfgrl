@@ -106,13 +106,9 @@ class MfgEnv(gym.Env):
                 info = {"msg": f"Decision step. Purchase cfg: {action}"}
                 reward = self.buy_cfg(cfg_id=action)
             else:
-                info = {"msg": "Tried to buy when the buffer is full!"}
-                reward = self.continue_production()
-
-                # play with the below termination version when we have enough time!
-                # info = {"msg": "Terminated. Tried to buy when the buffer is full!"}
-                # reward = self.PENALTY
-                # terminated = True
+                info = {"msg": "Terminated. Tried to buy when the buffer is full!"}
+                reward = -1.0 * self.PENALTY * self._env_state["demand"]
+                terminated = True
         else:
             info = {"msg": "Continuing production"}
             reward = self.continue_production()
