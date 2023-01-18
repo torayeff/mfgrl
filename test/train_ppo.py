@@ -23,27 +23,20 @@ if __name__ == "__main__":
         .resources(num_gpus=1)
     )
 
-    stop = {
-        "training_iteration": 100,
-        "timesteps_total": 1e6,
-        "episode_reward_mean": 90,
-    }
-
     # automated run with Tune and grid search and TensorBoard
     print("Training automatically with Ray Tune")
     tuner = tune.Tuner(
         "PPO",
         param_space=config.to_dict(),
         run_config=air.RunConfig(
-            stop=stop,
-            checkpoint_config=air.CheckpointConfig(checkpoint_frequency=5),
+            stop={"training_iteration": 1000},
+            checkpoint_config=air.CheckpointConfig(checkpoint_frequency=10),
         ),
     )
     results = tuner.fit()
 
     # get best results
     best_result = results.get_best_result(metric="episode_reward_mean", mode="max")
-    best_checkpoint = best_result.checkpoint
-    print(best_checkpoint)
+    print(best_result.checkpoint)
 
     ray.shutdown()
