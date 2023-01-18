@@ -1,4 +1,6 @@
 from ray.rllib.algorithms.ppo import PPOConfig
+from ray.tune.logger import pretty_print
+
 from mfgrl.envs.mfgenv import MfgEnv
 
 config = (
@@ -20,8 +22,13 @@ config = (
 
 algo = config.build()
 
-for i in range(5):
+for i in range(100):
     print(f"Training: {i}")
-    algo.train()
+    result = algo.train()
+    print(pretty_print(result))
+
+# save
+checkpoint_dir = algo.save()
+print(f"Checkpoint saved in directory {checkpoint_dir}")
 
 print(algo.evaluate())
