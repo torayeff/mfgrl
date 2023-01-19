@@ -13,8 +13,7 @@ if __name__ == "__main__":
             MfgEnv,
             env_config={
                 "data_file": "E:/lab/mfgrl/test/data.json",
-                "scale_costs": True,
-                "stochastic": False,
+                "stochastic": True,
                 "render_mode": None,
             },
         )

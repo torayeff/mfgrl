@@ -17,15 +17,12 @@ class MfgEnv(gym.Env):
             env_config (dict): The configuration dictionary.
                     It must have the following keys and values:
                     data_file (str): The data file location.
-                    scale_costs (book, optional): Whether to scale the costs.
-                                                  Defaults to True.
                     stochastic (bool, optional): Stochastic environment.
                                                  Defaults to False.
                     render_mode (str, optional): Render mode. Defaults to None.
         """
         super().__init__()
 
-        self.scale_costs = env_config["scale_costs"]
         self.stochastic = env_config["stochastic"]
         self.render_mode = env_config["render_mode"]
 
@@ -411,8 +408,6 @@ class MfgEnv(gym.Env):
         self.BUFFER_SIZE = 10
         self.DEMAND = data["demand"]
         self.DEMAND_TIME = data["demand_time"]
-        self.MAX_INCURRING_COST = data["max_incurring_cost"]
-        self.MAX_RECURRING_COST = data["max_recurring_cost"]
         self.NUM_CFGS = len(data["configurations"])
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
@@ -433,13 +428,6 @@ class MfgEnv(gym.Env):
             )
             self.MARKET_SETUP_TIMES = np.append(
                 self.MARKET_SETUP_TIMES, v["setup_time"]
-            )
-        if self.scale_costs:
-            self.MARKET_INCUR_COSTS = (
-                self.MARKET_INCUR_COSTS / self.MAX_INCURRING_COST
-            )
-            self.MARKET_RECUR_COSTS = (
-                self.MARKET_RECUR_COSTS / self.MAX_RECURRING_COST
             )
 
         # sanity check whether the problem is feasible

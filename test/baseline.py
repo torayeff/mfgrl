@@ -7,7 +7,6 @@ random.seed(4242)
 
 env_config = {
     "data_file": "data.json",
-    "scale_costs": True,
     "stochastic": False,
     "render_mode": "human",
 }

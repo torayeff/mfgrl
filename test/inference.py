@@ -8,7 +8,6 @@ algo = Algorithm.from_checkpoint(checkpoint_path)
 # prepare environment
 env_config = {
     "data_file": "data.json",
-    "scale_costs": True,
     "stochastic": False,
     "render_mode": "human",
 }
