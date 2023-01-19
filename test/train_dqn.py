@@ -12,7 +12,7 @@ if __name__ == "__main__":
         .environment(
             MfgEnv,
             env_config={
-                "data_file": "/Users/torayeff/lab/mfgrl/test/data.json",
+                "data_file": "E:/lab/mfgrl/test/data.json",
                 "scale_costs": True,
                 "stochastic": False,
                 "render_mode": None,
