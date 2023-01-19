@@ -70,10 +70,10 @@ class MfgEnv(gym.Env):
             "cfgs_status": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "produced_counts": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             # market data
-            "market_incurring_costs": self.market_incurring_costs,
-            "market_recurring_costs": self.market_recurring_costs,
-            "market_production_rates": self.market_production_rates,
-            "market_setup_times": self.market_setup_times,
+            "market_incurring_costs": self.MARKET_INCUR_COSTS,
+            "market_recurring_costs": self.MARKET_RECUR_COSTS,
+            "market_production_rates": self.MARKET_PRODN_RATES,
+            "market_setup_times": self.MARKET_SETUP_TIMES,
         }
         # static state are used for stochastic operations
         self._static_state = {
@@ -360,26 +360,26 @@ class MfgEnv(gym.Env):
         """Imitates fluctuating market properties with 10% uncertainty."""
         # incurring costs
         self._env_state["market_incurring_costs"] = np.random.uniform(
-            low=self.market_incurring_costs - 0.1 * self.market_incurring_costs,
-            high=self.market_incurring_costs + 0.1 * self.market_incurring_costs,
+            low=self.MARKET_INCUR_COSTS - 0.1 * self.MARKET_INCUR_COSTS,
+            high=self.MARKET_INCUR_COSTS + 0.1 * self.MARKET_INCUR_COSTS,
         )
 
         # recurring costs
         self._env_state["market_recurring_costs"] = np.random.uniform(
-            low=self.market_recurring_costs - 0.1 * self.market_recurring_costs,
-            high=self.market_recurring_costs + 0.1 * self.market_recurring_costs,
+            low=self.MARKET_RECUR_COSTS - 0.1 * self.MARKET_RECUR_COSTS,
+            high=self.MARKET_RECUR_COSTS + 0.1 * self.MARKET_RECUR_COSTS,
         )
 
         # production rates
         self._env_state["market_production_rates"] = np.random.uniform(
-            low=self.market_production_rates - 0.1 * self.market_production_rates,
-            high=self.market_production_rates + 0.1 * self.market_production_rates,
+            low=self.MARKET_PRODN_RATES - 0.1 * self.MARKET_PRODN_RATES,
+            high=self.MARKET_PRODN_RATES + 0.1 * self.MARKET_PRODN_RATES,
         )
 
         # setup times
         self._env_state["market_setup_times"] = np.random.uniform(
-            low=self.market_setup_times - 0.1 * self.market_setup_times,
-            high=self.market_setup_times + 0.1 * self.market_setup_times,
+            low=self.MARKET_SETUP_TIMES - 0.1 * self.MARKET_SETUP_TIMES,
+            high=self.MARKET_SETUP_TIMES + 0.1 * self.MARKET_SETUP_TIMES,
         )
 
     def _get_obs(self) -> np.ndarray:
@@ -414,41 +414,39 @@ class MfgEnv(gym.Env):
         self.MAX_INCURRING_COST = data["max_incurring_cost"]
         self.MAX_RECURRING_COST = data["max_recurring_cost"]
         self.NUM_CFGS = len(data["configurations"])
-        self.PENALTY = data["penalty"]
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
-        self.market_incurring_costs = np.array([], dtype=np.float32)
-        self.market_recurring_costs = np.array([], dtype=np.float32)
-        self.market_production_rates = np.array([], dtype=np.float32)
-        self.market_setup_times = np.array([], dtype=np.float32)
-
+        # costs
+        self.MARKET_INCUR_COSTS = np.array([], dtype=np.float32)
+        self.MARKET_RECUR_COSTS = np.array([], dtype=np.float32)
+        self.MARKET_PRODN_RATES = np.array([], dtype=np.float32)
+        self.MARKET_SETUP_TIMES = np.array([], dtype=np.float32)
         for v in data["configurations"].values():
-            self.market_incurring_costs = np.append(
-                self.market_incurring_costs, v["incurring_cost"]
+            self.MARKET_INCUR_COSTS = np.append(
+                self.MARKET_INCUR_COSTS, v["incurring_cost"]
             )
-            self.market_recurring_costs = np.append(
-                self.market_recurring_costs, v["recurring_cost"]
+            self.MARKET_RECUR_COSTS = np.append(
+                self.MARKET_RECUR_COSTS, v["recurring_cost"]
             )
-            self.market_production_rates = np.append(
-                self.market_production_rates, v["production_rate"]
+            self.MARKET_PRODN_RATES = np.append(
+                self.MARKET_PRODN_RATES, v["production_rate"]
             )
-            self.market_setup_times = np.append(
-                self.market_setup_times, v["setup_time"]
+            self.MARKET_SETUP_TIMES = np.append(
+                self.MARKET_SETUP_TIMES, v["setup_time"]
             )
-
         if self.scale_costs:
-            self.market_incurring_costs = (
-                self.market_incurring_costs / self.MAX_INCURRING_COST
+            self.MARKET_INCUR_COSTS = (
+                self.MARKET_INCUR_COSTS / self.MAX_INCURRING_COST
             )
-            self.market_recurring_costs = (
-                self.market_recurring_costs / self.MAX_RECURRING_COST
+            self.MARKET_RECUR_COSTS = (
+                self.MARKET_RECUR_COSTS / self.MAX_RECURRING_COST
             )
 
         # sanity check whether the problem is feasible
-        idx = np.argmax(self.market_production_rates)
+        idx = np.argmax(self.MARKET_PRODN_RATES)
         assert (
-            self.DEMAND_TIME - self.market_setup_times[idx]
-        ) * self.market_production_rates[idx] * self.BUFFER_SIZE > self.DEMAND, (
+            self.DEMAND_TIME - self.MARKET_SETUP_TIMES[idx]
+        ) * self.MARKET_PRODN_RATES[idx] * self.BUFFER_SIZE > self.DEMAND, (
             "Problem is not feasible. "
             "Demand will not be satisfied even in the best case."
         )
@@ -458,8 +456,8 @@ class MfgEnv(gym.Env):
         # max. possible incur.cost = purchasing the most expensive and filling buffer
         # max. possible recur. cost = running the most recur. cost equipment
         self.PENALTY_K = (
-            self.market_incurring_costs.max()
-            + self.MAX_EPISODE_STEPS * self.market_recurring_costs.max()
+            self.MARKET_INCUR_COSTS.max()
+            + self.MAX_EPISODE_STEPS * self.MARKET_RECUR_COSTS.max()
         ) * self.BUFFER_SIZE
 
     def _render_frame(self, **kwargs):
