@@ -67,10 +67,10 @@ class MfgEnv(gym.Env):
             "cfgs_status": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "produced_counts": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             # market data
-            "market_incurring_costs": self.MARKET_INCUR_COSTS,
-            "market_recurring_costs": self.MARKET_RECUR_COSTS,
-            "market_production_rates": self.MARKET_PRODN_RATES,
-            "market_setup_times": self.MARKET_SETUP_TIMES,
+            "market_incurring_costs": self.INCUR_COSTS,
+            "market_recurring_costs": self.RECUR_COSTS,
+            "market_production_rates": self.PRODN_RATES,
+            "market_setup_times": self.SETUP_TIMES,
         }
         # static state are used for stochastic operations
         self._static_state = {
@@ -97,42 +97,29 @@ class MfgEnv(gym.Env):
         """
         assert 0 <= action <= self.BUFFER_SIZE, "Invalid action"
 
-        terminated = False
-        if action < self.NUM_CFGS:
-            if self.buffer_idx < self.BUFFER_SIZE:
+        if self.buffer_idx < self.BUFFER_SIZE:
+            if action < self.NUM_CFGS:
                 info = {"msg": f"Decision step. Purchase cfg: {action}"}
                 reward = self.buy_cfg(cfg_id=action)
             else:
-                info = {"msg": "Terminated. Tried to buy when the buffer is full!"}
-                reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
-                terminated = True
-        else:
-            info = {"msg": "Continuing production"}
-            reward = self.continue_production()
+                info = {"msg": "Continuing production"}
+                reward = self.continue_production()
 
-        # update environment
-        if self.stochastic:
-            self._imitate_market_uncertainties()
-            self._imitate_production_uncertainties()
+        # check for termination after performing action
+        terminated, rw, info2 = self._check_for_termination()
 
-        # check for possible terminations after environment update
-        if not terminated:
-            if (self._env_state["demand"] > 0) and (
-                (self._env_state["demand_time"] <= 0)
-                or (self.episode_steps >= self.MAX_EPISODE_STEPS)
-            ):
-                # demand was not satisfied within given time limits
-                info = {"msg": "Demand was not satisfied."}
-                reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
-                terminated = True
-            elif (
-                (self._env_state["demand"] <= 0)
-                and (self._env_state["demand_time"] >= 0)
-                and (self.episode_steps <= self.MAX_EPISODE_STEPS)
-            ):
-                info = {"msg": "Demand is satisfied"}
-                terminated = True
+        if terminated:
+            reward += rw
+            info = info2
+        elif self.buffer_idx == self.BUFFER_SIZE:
+            # check if the action was a final buy action
+            # continue simulation until the end and accumulate rewards
+            while not terminated:
+                reward += self.continue_production()
+                terminated, r, info = self._check_for_termination()
+                reward += r
 
+        # update total rewards
         self.total_rewards += reward
 
         # render
@@ -149,6 +136,30 @@ class MfgEnv(gym.Env):
             False,
             info,
         )
+
+    def _check_for_termination(self) -> Tuple[bool, float, dict]:
+        if (self._env_state["demand"] > 0) and (
+            (self._env_state["demand_time"] <= 0)
+            or (self.episode_steps >= self.MAX_EPISODE_STEPS)
+        ):
+            # demand was not satisfied within given time limits
+            info = {"msg": "Demand was not satisfied."}
+            reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
+            terminated = True
+        elif (
+            (self._env_state["demand"] <= 0)
+            and (self._env_state["demand_time"] >= 0)
+            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
+        ):
+            info = {"msg": "Demand is satisfied"}
+            reward = 0
+            terminated = True
+        else:
+            info = {}
+            reward = 0
+            terminated = False
+
+        return terminated, reward, info
 
     def buy_cfg(self, cfg_id: int) -> float:
         """Buys new configuration.
@@ -201,6 +212,11 @@ class MfgEnv(gym.Env):
         # increment buffer idx
         self.buffer_idx += 1
 
+        # update stochastic parameters
+        if self.stochastic:
+            self._imitate_market_uncertainties()
+            self._imitate_production_uncertainties()
+
         return reward
 
     def continue_production(self) -> float:
@@ -238,6 +254,11 @@ class MfgEnv(gym.Env):
             self._env_state["produced_counts"].astype(int)
         )
         self._env_state["demand_time"] -= 1
+
+        # update stochastic parameters
+        if self.stochastic:
+            self._imitate_market_uncertainties()
+            self._imitate_production_uncertainties()
 
         return reward
 
@@ -357,26 +378,26 @@ class MfgEnv(gym.Env):
         """Imitates fluctuating market properties with 10% uncertainty."""
         # incurring costs
         self._env_state["market_incurring_costs"] = np.random.uniform(
-            low=self.MARKET_INCUR_COSTS - 0.1 * self.MARKET_INCUR_COSTS,
-            high=self.MARKET_INCUR_COSTS + 0.1 * self.MARKET_INCUR_COSTS,
+            low=self.INCUR_COSTS - 0.1 * self.INCUR_COSTS,
+            high=self.INCUR_COSTS + 0.1 * self.INCUR_COSTS,
         )
 
         # recurring costs
         self._env_state["market_recurring_costs"] = np.random.uniform(
-            low=self.MARKET_RECUR_COSTS - 0.1 * self.MARKET_RECUR_COSTS,
-            high=self.MARKET_RECUR_COSTS + 0.1 * self.MARKET_RECUR_COSTS,
+            low=self.RECUR_COSTS - 0.1 * self.RECUR_COSTS,
+            high=self.RECUR_COSTS + 0.1 * self.RECUR_COSTS,
         )
 
         # production rates
         self._env_state["market_production_rates"] = np.random.uniform(
-            low=self.MARKET_PRODN_RATES - 0.1 * self.MARKET_PRODN_RATES,
-            high=self.MARKET_PRODN_RATES + 0.1 * self.MARKET_PRODN_RATES,
+            low=self.PRODN_RATES - 0.1 * self.PRODN_RATES,
+            high=self.PRODN_RATES + 0.1 * self.PRODN_RATES,
         )
 
         # setup times
         self._env_state["market_setup_times"] = np.random.uniform(
-            low=self.MARKET_SETUP_TIMES - 0.1 * self.MARKET_SETUP_TIMES,
-            high=self.MARKET_SETUP_TIMES + 0.1 * self.MARKET_SETUP_TIMES,
+            low=self.SETUP_TIMES - 0.1 * self.SETUP_TIMES,
+            high=self.SETUP_TIMES + 0.1 * self.SETUP_TIMES,
         )
 
     def _get_obs(self) -> np.ndarray:
@@ -412,29 +433,21 @@ class MfgEnv(gym.Env):
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
         # costs
-        self.MARKET_INCUR_COSTS = np.array([], dtype=np.float32)
-        self.MARKET_RECUR_COSTS = np.array([], dtype=np.float32)
-        self.MARKET_PRODN_RATES = np.array([], dtype=np.float32)
-        self.MARKET_SETUP_TIMES = np.array([], dtype=np.float32)
+        self.INCUR_COSTS = np.array([], dtype=np.float32)
+        self.RECUR_COSTS = np.array([], dtype=np.float32)
+        self.PRODN_RATES = np.array([], dtype=np.float32)
+        self.SETUP_TIMES = np.array([], dtype=np.float32)
         for v in data["configurations"].values():
-            self.MARKET_INCUR_COSTS = np.append(
-                self.MARKET_INCUR_COSTS, v["incurring_cost"]
-            )
-            self.MARKET_RECUR_COSTS = np.append(
-                self.MARKET_RECUR_COSTS, v["recurring_cost"]
-            )
-            self.MARKET_PRODN_RATES = np.append(
-                self.MARKET_PRODN_RATES, v["production_rate"]
-            )
-            self.MARKET_SETUP_TIMES = np.append(
-                self.MARKET_SETUP_TIMES, v["setup_time"]
-            )
+            self.INCUR_COSTS = np.append(self.INCUR_COSTS, v["incurring_cost"])
+            self.RECUR_COSTS = np.append(self.RECUR_COSTS, v["recurring_cost"])
+            self.PRODN_RATES = np.append(self.PRODN_RATES, v["production_rate"])
+            self.SETUP_TIMES = np.append(self.SETUP_TIMES, v["setup_time"])
 
         # sanity check whether the problem is feasible
-        idx = np.argmax(self.MARKET_PRODN_RATES)
-        assert (
-            self.DEMAND_TIME - self.MARKET_SETUP_TIMES[idx]
-        ) * self.MARKET_PRODN_RATES[idx] * self.BUFFER_SIZE > self.DEMAND, (
+        idx = np.argmax(self.PRODN_RATES)
+        assert (self.DEMAND_TIME - self.SETUP_TIMES[idx]) * self.PRODN_RATES[
+            idx
+        ] * self.BUFFER_SIZE > self.DEMAND, (
             "Problem is not feasible. "
             "Demand will not be satisfied even in the best case."
         )
@@ -444,8 +457,7 @@ class MfgEnv(gym.Env):
         # max. possible incur.cost = purchasing the most expensive and filling buffer
         # max. possible recur. cost = running the most recur. cost equipment
         self.PENALTY_K = (
-            self.MARKET_INCUR_COSTS.max()
-            + self.MAX_EPISODE_STEPS * self.MARKET_RECUR_COSTS.max()
+            self.INCUR_COSTS.max() + self.MAX_EPISODE_STEPS * self.RECUR_COSTS.max()
         ) * self.BUFFER_SIZE
 
     def _render_frame(self, **kwargs):
@@ -485,21 +497,19 @@ class MfgEnv(gym.Env):
         self.axes[1, 0].set_xticklabels([])
         self.axes[1, 0].grid(False)
 
-        # plot incurred costs
+        # plot market incurring costs
         self.axes[2, 0].bar(
             market_cfgs, self._env_state["market_incurring_costs"], color=palette[3]
         )
         self.axes[2, 0].set_ylabel("£")
-        self.axes[2, 0].set_ylim((0, 1))
         self.axes[2, 0].set_xticklabels([])
         self.axes[2, 0].set_title("Incurring costs (market)")
 
-        # plot recurring costs
+        # plot market recurring costs
         self.axes[3, 0].bar(
             market_cfgs, self._env_state["market_recurring_costs"], color=palette[4]
         )
         self.axes[3, 0].set_ylabel("kWh")
-        self.axes[3, 0].set_ylim((0, 1))
         self.axes[3, 0].set_xticklabels([])
         self.axes[3, 0].set_title("Recurring costs (market)")
 
@@ -545,7 +555,6 @@ class MfgEnv(gym.Env):
             buffer_idxs, self._env_state["incurred_costs"], color=palette[3]
         )
         self.axes[2, 1].set_ylabel("£")
-        self.axes[2, 1].set_ylim((0, 1))
         self.axes[2, 1].set_xticklabels([])
         self.axes[2, 1].set_title("Incurred costs (buffer)")
 
@@ -554,7 +563,6 @@ class MfgEnv(gym.Env):
             buffer_idxs, self._env_state["recurring_costs"], color=palette[4]
         )
         self.axes[3, 1].set_ylabel("kWh")
-        self.axes[3, 1].set_ylim((0, 1))
         self.axes[3, 1].set_xticklabels([])
         self.axes[3, 1].set_title("Recurring costs (buffer)")
 
