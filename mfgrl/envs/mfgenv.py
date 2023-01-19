@@ -107,7 +107,7 @@ class MfgEnv(gym.Env):
                 reward = self.buy_cfg(cfg_id=action)
             else:
                 info = {"msg": "Terminated. Tried to buy when the buffer is full!"}
-                reward = -1.0 * self.PENALTY * self._env_state["demand"]
+                reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
                 terminated = True
         else:
             info = {"msg": "Continuing production"}
@@ -126,9 +126,7 @@ class MfgEnv(gym.Env):
             ):
                 # demand was not satisfied within given time limits
                 info = {"msg": "Demand was not satisfied."}
-                # TODO: Document
-                # remaining_demand * k + max_possible_cost <= initial_demand * k
-                reward = -1.0 * self.PENALTY * self._env_state["demand"]
+                reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
                 terminated = True
             elif (
                 (self._env_state["demand"] <= 0)
@@ -417,7 +415,6 @@ class MfgEnv(gym.Env):
         self.MAX_RECURRING_COST = data["max_recurring_cost"]
         self.NUM_CFGS = len(data["configurations"])
         self.PENALTY = data["penalty"]
-        self.BONUS = data["bonus"]
         self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
 
         self.market_incurring_costs = np.array([], dtype=np.float32)
@@ -455,6 +452,15 @@ class MfgEnv(gym.Env):
             "Problem is not feasible. "
             "Demand will not be satisfied even in the best case."
         )
+
+        # calculate the penalty K
+        # K = max. possible incur. cost + max. possible recur. cost
+        # max. possible incur.cost = purchasing the most expensive and filling buffer
+        # max. possible recur. cost = running the most recur. cost equipment
+        self.PENALTY_K = (
+            self.market_incurring_costs.max()
+            + self.MAX_EPISODE_STEPS * self.market_recurring_costs.max()
+        ) * self.BUFFER_SIZE
 
     def _render_frame(self, **kwargs):
         """Renders one step of environment."""
