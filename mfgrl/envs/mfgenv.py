@@ -424,13 +424,13 @@ class MfgEnv(gym.Env):
     def _setup_data(self):
         """Sets up the data."""
         if self.DATA_FILE is None:
-            print("ENV IS INITIALIZED IN GENERAL MODE".center(150, "!"))
+            # print("ENV IS INITIALIZED IN GENERAL MODE".center(150, "!"))
 
             feasible_problem = False
             count = 0
             while not feasible_problem:
                 count += 1
-                print(f"Trying to generate a feasible problem [{count}]")
+                # print(f"Trying to generate a feasible problem [{count}]")
 
                 self.DEMAND = np.random.randint(1000, 10000)
                 self.DEMAND_TIME = np.random.randint(100, 1000)

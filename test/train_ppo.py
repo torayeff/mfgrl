@@ -12,7 +12,10 @@ if __name__ == "__main__":
         .environment(
             MfgEnv,
             env_config={
-                "data_file": "E:/lab/mfgrl/test/data.json",
+                "num_cfgs": 5,
+                "buffer_size": 10,
+                # "data_file": "E:/lab/mfgrl/test/data.json",
+                "data_file": None,
                 "stochastic": True,
                 "render_mode": None,
             },
@@ -28,7 +31,7 @@ if __name__ == "__main__":
         "PPO",
         param_space=config.to_dict(),
         run_config=air.RunConfig(
-            stop={"training_iteration": 1000},
+            stop={"training_iteration": 5000},
             checkpoint_config=air.CheckpointConfig(checkpoint_frequency=10),
         ),
     )
