@@ -1,9 +1,5 @@
 import gymnasium as gym
 import numpy as np
-import random
-
-np.random.seed(4242)
-random.seed(4242)
 
 env_config = {
     "data_file": "data.json",
@@ -11,7 +7,7 @@ env_config = {
     "render_mode": None,
 }
 env = gym.make("mfgrl:mfgrl/MfgEnv-v0", env_config=env_config)
-obs, info = env.reset(seed=42)
+obs, info = env.reset()
 print("Start state".center(100, "-"))
 for k, v in env.decode_obs(obs).items():
     print(k, v)
