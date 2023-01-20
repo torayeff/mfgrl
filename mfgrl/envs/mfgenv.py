@@ -180,11 +180,6 @@ class MfgEnv(gym.Env):
         # increment buffer idx
         self.buffer_idx += 1
 
-        # update stochastic parameters
-        if self.STOCHASTIC:
-            self._imitate_market_uncertainties()
-            self._imitate_production_uncertainties()
-
         return reward
 
     def continue_production(self) -> float:
