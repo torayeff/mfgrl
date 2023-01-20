@@ -4,7 +4,7 @@ import numpy as np
 env_config = {
     "num_cfgs": 5,
     "buffer_size": 10,
-    "data_file": "data.json",
+    "data_file": None,
     "stochastic": True,
     "render_mode": "human",
 }
