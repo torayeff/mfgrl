@@ -23,12 +23,12 @@ class MfgEnv(gym.Env):
         """
         super().__init__()
 
-        self.stochastic = env_config["stochastic"]
-        self.render_mode = env_config["render_mode"]
+        self.BUFFER_SIZE = env_config["buffer_size"]
+        self.NUM_CFGS = env_config["num_cfgs"]
+        self.DATA_FILE = env_config["data_file"]
+        self.STOCHASTIC = env_config["stochastic"]
+        self.RENDER_MODE = env_config["render_mode"]
 
-        self._setup_data(env_config["data_file"])
-
-        # observation and action spaces
         obs_dim = 2 + self.BUFFER_SIZE * 6 + self.NUM_CFGS * 4
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,)
@@ -46,27 +46,19 @@ class MfgEnv(gym.Env):
         """
         super().reset(seed=seed)
 
+        self._setup_data()
         self.episode_steps = 0
-
-        # total reward
         self.total_rewards = 0
-
-        # reset buffer
         self.buffer_idx = 0
-
-        # reset environment state
         self._env_state = {
-            # demand data
             "demand": self.DEMAND,
             "demand_time": self.DEMAND_TIME,
-            # available resources data
             "incurred_costs": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "recurring_costs": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "production_rates": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "setup_times": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "cfgs_status": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
             "produced_counts": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
-            # market data
             "market_incurring_costs": self.INCUR_COSTS,
             "market_recurring_costs": self.RECUR_COSTS,
             "market_production_rates": self.PRODN_RATES,
@@ -78,7 +70,7 @@ class MfgEnv(gym.Env):
             "production_rates": np.zeros(self.BUFFER_SIZE, dtype=np.float32),
         }
 
-        if self.render_mode == "human":
+        if self.RENDER_MODE == "human":
             sns.set()
             self.fig, self.axes = plt.subplots(6, 2, figsize=(10, 7))
             self.fig.suptitle("Manufacturing Environment")
@@ -123,7 +115,7 @@ class MfgEnv(gym.Env):
         self.total_rewards += reward
 
         # render
-        if self.render_mode == "human":
+        if self.RENDER_MODE == "human":
             self._render_frame(action=action, reward=reward)
             if terminated:
                 plt.show(block=True)
@@ -136,30 +128,6 @@ class MfgEnv(gym.Env):
             False,
             info,
         )
-
-    def _check_for_termination(self) -> Tuple[bool, float, dict]:
-        if (self._env_state["demand"] > 0) and (
-            (self._env_state["demand_time"] <= 0)
-            or (self.episode_steps >= self.MAX_EPISODE_STEPS)
-        ):
-            # demand was not satisfied within given time limits
-            info = {"msg": "Demand was not satisfied."}
-            reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
-            terminated = True
-        elif (
-            (self._env_state["demand"] <= 0)
-            and (self._env_state["demand_time"] >= 0)
-            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
-        ):
-            info = {"msg": "Demand is satisfied"}
-            reward = 0
-            terminated = True
-        else:
-            info = {}
-            reward = 0
-            terminated = False
-
-        return terminated, reward, info
 
     def buy_cfg(self, cfg_id: int) -> float:
         """Buys new configuration.
@@ -213,7 +181,7 @@ class MfgEnv(gym.Env):
         self.buffer_idx += 1
 
         # update stochastic parameters
-        if self.stochastic:
+        if self.STOCHASTIC:
             self._imitate_market_uncertainties()
             self._imitate_production_uncertainties()
 
@@ -256,7 +224,7 @@ class MfgEnv(gym.Env):
         self._env_state["demand_time"] -= 1
 
         # update stochastic parameters
-        if self.stochastic:
+        if self.STOCHASTIC:
             self._imitate_market_uncertainties()
             self._imitate_production_uncertainties()
 
@@ -331,6 +299,35 @@ class MfgEnv(gym.Env):
         obs_dict["market_setup_times"] = obs_vec[start : start + self.NUM_CFGS]
 
         return obs_dict
+
+    def _check_for_termination(self) -> Tuple[bool, float, dict]:
+        """Checks whether evironment is terminated or not.
+
+        Returns:
+            Tuple[bool, float, dict]: Terminated, reward, info.
+        """
+        if (self._env_state["demand"] > 0) and (
+            (self._env_state["demand_time"] <= 0)
+            or (self.episode_steps >= self.MAX_EPISODE_STEPS)
+        ):
+            # demand was not satisfied within given time limits
+            info = {"msg": "Demand was not satisfied."}
+            reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
+            terminated = True
+        elif (
+            (self._env_state["demand"] <= 0)
+            and (self._env_state["demand_time"] >= 0)
+            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
+        ):
+            info = {"msg": "Demand is satisfied"}
+            reward = 0
+            terminated = True
+        else:
+            info = {}
+            reward = 0
+            terminated = False
+
+        return terminated, reward, info
 
     def _imitate_production_uncertainties(self):
         """Imitates fluctuating production uncertainties:
@@ -416,41 +413,64 @@ class MfgEnv(gym.Env):
         """
         return {}
 
-    def _setup_data(self, data_file: str):
-        """Sets up the data.
+    def _check_problem_feasibility(self) -> bool:
+        """Checks whether the problem is feasible.
+        The problem is not feasible if the solution does not exist
+        using the manufacturing configuration with highes capacity.
 
-        Args:
-            data_file (str): The location of data file.
+        Returns:
+            bool: Feasibility of the problem.
         """
-        with open(data_file, "r") as f:
-            data = json.load(f)
-
-        # constants
-        self.BUFFER_SIZE = data["buffer_size"]
-        self.DEMAND = data["demand"]
-        self.DEMAND_TIME = data["demand_time"]
-        self.NUM_CFGS = len(data["configurations"])
-        self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
-
-        # costs
-        self.INCUR_COSTS = np.array([], dtype=np.float32)
-        self.RECUR_COSTS = np.array([], dtype=np.float32)
-        self.PRODN_RATES = np.array([], dtype=np.float32)
-        self.SETUP_TIMES = np.array([], dtype=np.float32)
-        for v in data["configurations"].values():
-            self.INCUR_COSTS = np.append(self.INCUR_COSTS, v["incurring_cost"])
-            self.RECUR_COSTS = np.append(self.RECUR_COSTS, v["recurring_cost"])
-            self.PRODN_RATES = np.append(self.PRODN_RATES, v["production_rate"])
-            self.SETUP_TIMES = np.append(self.SETUP_TIMES, v["setup_time"])
-
-        # sanity check whether the problem is feasible
         idx = np.argmax(self.PRODN_RATES)
-        assert (self.DEMAND_TIME - self.SETUP_TIMES[idx]) * self.PRODN_RATES[
+        return (self.DEMAND_TIME - self.SETUP_TIMES[idx]) * self.PRODN_RATES[
             idx
-        ] * self.BUFFER_SIZE > self.DEMAND, (
-            "Problem is not feasible. "
-            "Demand will not be satisfied even in the best case."
-        )
+        ] * self.BUFFER_SIZE > self.DEMAND
+
+    def _setup_data(self):
+        """Sets up the data."""
+        if self.DATA_FILE is None:
+            print("ENV IS INITIALIZED IN GENERAL MODE".center(150, "!"))
+
+            feasible_problem = False
+            count = 0
+            while not feasible_problem:
+                count += 1
+                print(f"Trying to generate a feasible problem [{count}]")
+
+                self.DEMAND = np.random.randint(1000, 10000)
+                self.DEMAND_TIME = np.random.randint(100, 1000)
+                self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
+
+                self.INCUR_COSTS = np.random.randint(500, 10000, self.NUM_CFGS)
+                self.RECUR_COSTS = np.random.randint(10, 100, self.NUM_CFGS)
+                self.PRODN_RATES = np.random.uniform(0.5, 10.0, self.NUM_CFGS)
+                self.SETUP_TIMES = np.random.uniform(1.0, 10.0, self.NUM_CFGS)
+
+                feasible_problem = self._check_problem_feasibility()
+        else:
+            with open(self.DATA_FILE, "r") as f:
+                data = json.load(f)
+
+            assert self.BUFFER_SIZE == data["buffer_size"] and self.NUM_CFGS == len(
+                data["configurations"]
+            ), "MISMATCH in BUFFER_SIZE and/or NUM_CFGS"
+
+            self.DEMAND = data["demand"]
+            self.DEMAND_TIME = data["demand_time"]
+            self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
+            self.INCUR_COSTS = np.array([], dtype=np.float32)
+            self.RECUR_COSTS = np.array([], dtype=np.float32)
+            self.PRODN_RATES = np.array([], dtype=np.float32)
+            self.SETUP_TIMES = np.array([], dtype=np.float32)
+            for v in data["configurations"].values():
+                self.INCUR_COSTS = np.append(self.INCUR_COSTS, v["incurring_cost"])
+                self.RECUR_COSTS = np.append(self.RECUR_COSTS, v["recurring_cost"])
+                self.PRODN_RATES = np.append(self.PRODN_RATES, v["production_rate"])
+                self.SETUP_TIMES = np.append(self.SETUP_TIMES, v["setup_time"])
+
+            assert (
+                self._check_problem_feasibility()
+            ), "Infeasible. Demand will not be satisfied even in the best case."
 
         # calculate the penalty K
         # K = max. possible incur. cost + max. possible recur. cost

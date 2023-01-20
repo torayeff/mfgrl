@@ -2,9 +2,11 @@ import gymnasium as gym
 import numpy as np
 
 env_config = {
+    "num_cfgs": 5,
+    "buffer_size": 10,
     "data_file": "data.json",
     "stochastic": True,
-    "render_mode": None,
+    "render_mode": "human",
 }
 env = gym.make("mfgrl:mfgrl/MfgEnv-v0", env_config=env_config)
 obs, info = env.reset()

@@ -7,6 +7,8 @@ algo = Algorithm.from_checkpoint(checkpoint_path)
 
 # prepare environment
 env_config = {
+    "num_cfgs": 5,
+    "buffer_size": 10,
     "data_file": "data.json",
     "stochastic": True,
     "render_mode": "human",
