@@ -426,7 +426,7 @@ class MfgEnv(gym.Env):
             data = json.load(f)
 
         # constants
-        self.BUFFER_SIZE = 10
+        self.BUFFER_SIZE = data["buffer_size"]
         self.DEMAND = data["demand"]
         self.DEMAND_TIME = data["demand_time"]
         self.NUM_CFGS = len(data["configurations"])
