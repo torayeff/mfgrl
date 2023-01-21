@@ -2,9 +2,7 @@ import gymnasium as gym
 import numpy as np
 
 env_config = {
-    "num_cfgs": 5,
-    "buffer_size": 10,
-    "data_file": None,
+    "data_file": "/Users/torayeff/lab/mfgrl/test/data.json",
     "stochastic": True,
     "render_mode": "human",
 }
