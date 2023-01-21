@@ -1,3 +1,5 @@
+import pathlib
+
 import ray
 from ray import air, tune
 from ray.rllib.algorithms.ppo import PPOConfig
@@ -13,7 +15,7 @@ config = (
     .environment(
         MfgEnv,
         env_config={
-            "data_file": "/Users/torayeff/lab/mfgrl/test/data.json",
+            "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
             "stochastic": True,
             "render_mode": None,
         },
@@ -21,6 +23,8 @@ config = (
     .framework("torch")
     .rollouts(num_rollout_workers=1)
     .resources(num_gpus=0)
+    .evaluation(evaluation_num_workers=1)
+    .evaluation_interval(10)
 )
 
 # automated run with Tune and grid search and TensorBoard

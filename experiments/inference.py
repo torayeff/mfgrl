@@ -1,9 +1,30 @@
-import gymnasium as gym
-from ray.rllib.algorithms.algorithm import Algorithm
+import pathlib
 
-# load algorithm
-checkpoint_path = "checkpoints/PPO_MfgEnv_checkpoint_001000"
-algo = Algorithm.from_checkpoint(checkpoint_path)
+import gymnasium as gym
+from ray.rllib.algorithms.ppo import PPOConfig
+
+from mfgrl.envs.mfgenv import MfgEnv
+
+
+# prepare config and load from checkpoint
+checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_000100"
+config = (
+    PPOConfig()
+    .environment(
+        MfgEnv,
+        env_config={
+            "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
+            "stochastic": True,
+            "render_mode": None,
+        },
+    )
+    .framework("torch")
+    .rollouts(num_rollout_workers=1)
+    .evaluation(evaluation_num_workers=1)
+    .resources(num_gpus=0)
+)
+algo = config.build()
+algo.restore(checkpoint_path=checkpoint_path)
 
 # prepare environment
 env_config = {

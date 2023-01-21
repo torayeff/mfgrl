@@ -1,8 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
+
 env_config = {
-    "data_file": "/Users/torayeff/lab/mfgrl/test/data.json",
+    "data_file": "data.json",
     "stochastic": True,
     "render_mode": "human",
 }
