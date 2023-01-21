@@ -33,20 +33,22 @@ The **state** of the environment is an $(2 + 6B + 4M)$-dimensional vector consis
 - Market setup times, i.e., stochastically changing the setup times of manufacturing configurations in the market: $\mathcal{U} \in \mathbb{R}_{>0}^M$
 
 The valid **action** in the environment is an integer between $0$ and $M$ inclusive, i.e., $a \in [0, M]$:
+
 $$
-    \textit{Step}(a) = \begin{cases} 
-      ``\text{buy configuration } a" \text{, if } 0\leq a < M\\
-      \text{``continue production", otherwise}
-   \end{cases}
+\textit{Step}(a) = \begin{cases}
+    \text{buy configuration } a \text{, if } 0\leq a < M\\
+      \text{continue production, otherwise}
+\end{cases}
 $$
-where ***Step($a$)*** makes one episode step in the environment.
+
+where $Step(a)$ makes one episode step in the environment.
 
 ### Environment dynamics
 - The selected action by an agent affects the dynamics of the environment as follows:
     - Action "buy configuration $a$" adds a configuration $a$ into the production buffer. It also pauses the remaining demand time, $T_r$, in the environment. Counter-intuitively, stopping the remaining demand time resembles a decision-making process in the real world where purchasing decisions can be made while production is still running.
     - Continuing production decreases the remaining demand time.
     - An agent can make purchase decisions until the buffer is full. As soon as the buffer is full, an agent exceeds all its action choices, and the environment advances independently until the termination criteria are reached.
-    - The environment terminates when the condition "$D_r\le0 \text{ OR } T_r\le0$" is met.
+    - The environment terminates when the condition $D_r\le0 \text{ OR } T_r\le0$ is met.
 
 ### Learning principles
 - Two main **learning principles** are defined for an agent:
