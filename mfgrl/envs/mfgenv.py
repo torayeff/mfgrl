@@ -23,11 +23,10 @@ class MfgEnv(gym.Env):
         """
         super().__init__()
 
-        self.BUFFER_SIZE = env_config["buffer_size"]
-        self.NUM_CFGS = env_config["num_cfgs"]
         self.DATA_FILE = env_config["data_file"]
         self.STOCHASTIC = env_config["stochastic"]
         self.RENDER_MODE = env_config["render_mode"]
+        self._setup_data()
 
         obs_dim = 2 + self.BUFFER_SIZE * 6 + self.NUM_CFGS * 4
         self.observation_space = gym.spaces.Box(
@@ -46,7 +45,6 @@ class MfgEnv(gym.Env):
         """
         super().reset(seed=seed)
 
-        self._setup_data()
         self.episode_steps = 0
         self.total_rewards = 0
         self.buffer_idx = 0
@@ -423,49 +421,27 @@ class MfgEnv(gym.Env):
 
     def _setup_data(self):
         """Sets up the data."""
-        if self.DATA_FILE is None:
-            # print("ENV IS INITIALIZED IN GENERAL MODE".center(150, "!"))
+        with open(self.DATA_FILE, "r") as f:
+            data = json.load(f)
 
-            feasible_problem = False
-            count = 0
-            while not feasible_problem:
-                count += 1
-                # print(f"Trying to generate a feasible problem [{count}]")
+        self.BUFFER_SIZE = data["buffer_size"]
+        self.NUM_CFGS = len(data["configurations"])
+        self.DEMAND = data["demand"]
+        self.DEMAND_TIME = data["demand_time"]
+        self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
+        self.INCUR_COSTS = np.array([], dtype=np.float32)
+        self.RECUR_COSTS = np.array([], dtype=np.float32)
+        self.PRODN_RATES = np.array([], dtype=np.float32)
+        self.SETUP_TIMES = np.array([], dtype=np.float32)
+        for v in data["configurations"].values():
+            self.INCUR_COSTS = np.append(self.INCUR_COSTS, v["incurring_cost"])
+            self.RECUR_COSTS = np.append(self.RECUR_COSTS, v["recurring_cost"])
+            self.PRODN_RATES = np.append(self.PRODN_RATES, v["production_rate"])
+            self.SETUP_TIMES = np.append(self.SETUP_TIMES, v["setup_time"])
 
-                self.DEMAND = np.random.randint(1000, 10000)
-                self.DEMAND_TIME = np.random.randint(100, 1000)
-                self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
-
-                self.INCUR_COSTS = np.random.randint(500, 10000, self.NUM_CFGS)
-                self.RECUR_COSTS = np.random.randint(10, 100, self.NUM_CFGS)
-                self.PRODN_RATES = np.random.uniform(0.5, 10.0, self.NUM_CFGS)
-                self.SETUP_TIMES = np.random.uniform(1.0, 10.0, self.NUM_CFGS)
-
-                feasible_problem = self._check_problem_feasibility()
-        else:
-            with open(self.DATA_FILE, "r") as f:
-                data = json.load(f)
-
-            assert self.BUFFER_SIZE == data["buffer_size"] and self.NUM_CFGS == len(
-                data["configurations"]
-            ), "MISMATCH in BUFFER_SIZE and/or NUM_CFGS"
-
-            self.DEMAND = data["demand"]
-            self.DEMAND_TIME = data["demand_time"]
-            self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
-            self.INCUR_COSTS = np.array([], dtype=np.float32)
-            self.RECUR_COSTS = np.array([], dtype=np.float32)
-            self.PRODN_RATES = np.array([], dtype=np.float32)
-            self.SETUP_TIMES = np.array([], dtype=np.float32)
-            for v in data["configurations"].values():
-                self.INCUR_COSTS = np.append(self.INCUR_COSTS, v["incurring_cost"])
-                self.RECUR_COSTS = np.append(self.RECUR_COSTS, v["recurring_cost"])
-                self.PRODN_RATES = np.append(self.PRODN_RATES, v["production_rate"])
-                self.SETUP_TIMES = np.append(self.SETUP_TIMES, v["setup_time"])
-
-            assert (
-                self._check_problem_feasibility()
-            ), "Infeasible. Demand will not be satisfied even in the best case."
+        assert (
+            self._check_problem_feasibility()
+        ), "Infeasible. Demand will not be satisfied even in the best case."
 
         # calculate the penalty K
         # K = max. possible incur. cost + max. possible recur. cost
