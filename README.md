@@ -1,5 +1,6 @@
 # Manufacturing Reinforcement Learning Environment
 ![](docs/mfgrl_vis.gif)
+Please refer to this [file](docs/description.md) for problem formulation and the environment description.
 
 ## Installation
 Clone
@@ -30,3 +31,10 @@ while True:
     if terminated:
         break
 ```
+
+## Acknowledgements
+This work was developed at the [Institute for Advanced Manufacturing at the University of Nottingham](https://www.nottingham.ac.uk/ifam/index.aspx) with collaboration as a part of the [Digital Manufacturing and Design Training Network](https://dimanditn.eu/).
+
+This work was developed at the [Institute for Advanced Manufacturing at the University of Nottingham](https://www.nottingham.ac.uk/ifam/index.aspx), in collaboration with [Mondragon University](https://www.mondragon.edu/en/home), as part of the Digital Manufacturing and Design Training Network.
+
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under the Marie Skłodowska-Curie grant agreement No 814078.
