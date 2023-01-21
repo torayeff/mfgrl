@@ -1,5 +1,5 @@
 # Manufacturing Reinforcement Learning Environment
-![](media/mfgrl_vis.gif)
+![](docs/mfgrl_vis.gif)
 
 ## Installation
 Clone
