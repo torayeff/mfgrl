@@ -324,7 +324,7 @@ class MfgEnv(gym.Env):
 
     def _imitate_production_uncertainties(self):
         """Imitates fluctuating production uncertainties:
-        1. Failure of configurations: -+ 10%
+        1. Failure of configurations: 1%
         2. Production output: -+10%
         3. Recurring cost: -+10%
         """
@@ -335,7 +335,7 @@ class MfgEnv(gym.Env):
         running_cfgs = np.where(self._env_state["cfgs_status"] == 1)[0]
         if len(running_cfgs) > 0:
             cfg_id = np.random.choice(running_cfgs)
-            if np.random.uniform(0, 1) > 0.9:
+            if np.random.uniform(0, 1) > 0.99:
                 self._env_state["cfgs_status"][cfg_id] = np.random.uniform(0.7, 1)
 
         # imitate fluctuating production rates
