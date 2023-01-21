@@ -28,7 +28,7 @@ algo.restore(checkpoint_path=checkpoint_path)
 
 # prepare environment
 env_config = {
-    "data_file": "data.json",
+    "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
     "stochastic": True,
     "render_mode": "human",
 }

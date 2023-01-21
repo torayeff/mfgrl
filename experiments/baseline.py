@@ -1,9 +1,11 @@
+import pathlib
+
 import gymnasium as gym
 import numpy as np
 
-
+# prepare environment
 env_config = {
-    "data_file": "data.json",
+    "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
     "stochastic": True,
     "render_mode": "human",
 }
@@ -13,6 +15,7 @@ print("Start state".center(100, "-"))
 for k, v in env.decode_obs(obs).items():
     print(k, v)
 
+# inference
 total_reward = 0
 steps = 0
 max_production_action = np.argmax(env.decode_obs(obs)["market_production_rates"])
