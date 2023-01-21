@@ -44,8 +44,8 @@ class MfgEnv(gym.Env):
             Tuple[np.ndarray, dict]: Observation and info.
         """
         super().reset(seed=seed)
+        self._t = 0
 
-        self.episode_steps = 0
         self.total_rewards = 0
         self.buffer_idx = 0
         self._env_state = {
@@ -85,6 +85,7 @@ class MfgEnv(gym.Env):
             Tuple[np.ndarray, float, bool, bool, dict]:
                 Observation, reward, terminated, truncated, info.
         """
+        self._t += 1
         assert 0 <= action <= self.BUFFER_SIZE, "Invalid action"
 
         if self.buffer_idx < self.BUFFER_SIZE:
@@ -299,19 +300,11 @@ class MfgEnv(gym.Env):
         Returns:
             Tuple[bool, float, dict]: Terminated, reward, info.
         """
-        if (self._env_state["demand"] > 0) and (
-            (self._env_state["demand_time"] <= 0)
-            or (self.episode_steps >= self.MAX_EPISODE_STEPS)
-        ):
-            # demand was not satisfied within given time limits
+        if (self._env_state["demand"] > 0) and (self._env_state["demand_time"] <= 0):
             info = {"msg": "Demand was not satisfied."}
             reward = -1.0 * self.PENALTY_K * self._env_state["demand"]
             terminated = True
-        elif (
-            (self._env_state["demand"] <= 0)
-            and (self._env_state["demand_time"] >= 0)
-            and (self.episode_steps <= self.MAX_EPISODE_STEPS)
-        ):
+        elif (self._env_state["demand"] <= 0) and (self._env_state["demand_time"] >= 0):
             info = {"msg": "Demand is satisfied"}
             reward = 0
             terminated = True
@@ -428,7 +421,6 @@ class MfgEnv(gym.Env):
         self.NUM_CFGS = len(data["configurations"])
         self.DEMAND = data["demand"]
         self.DEMAND_TIME = data["demand_time"]
-        self.MAX_EPISODE_STEPS = self.BUFFER_SIZE + self.DEMAND_TIME
         self.INCUR_COSTS = np.array([], dtype=np.float32)
         self.RECUR_COSTS = np.array([], dtype=np.float32)
         self.PRODN_RATES = np.array([], dtype=np.float32)
@@ -448,7 +440,7 @@ class MfgEnv(gym.Env):
         # max. possible incur.cost = purchasing the most expensive and filling buffer
         # max. possible recur. cost = running the most recur. cost equipment
         self.PENALTY_K = (
-            self.INCUR_COSTS.max() + self.MAX_EPISODE_STEPS * self.RECUR_COSTS.max()
+            self.INCUR_COSTS.max() + self.DEMAND_TIME * self.RECUR_COSTS.max()
         ) * self.BUFFER_SIZE
 
     def _render_frame(self, **kwargs):
@@ -480,7 +472,7 @@ class MfgEnv(gym.Env):
         self.axes[1, 0].text(
             0.5,
             0.5,
-            f"Action: {action}. Step reward: {reward:.2f}. "
+            f"Action: {action}.\nStep reward: {reward:.2f}.\n"
             f" Total rewards: {self.total_rewards:.2f}",
             **text_kwargs,
         )
@@ -576,4 +568,5 @@ class MfgEnv(gym.Env):
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
         plt.tight_layout()
+        # plt.savefig(f"/Users/torayeff/Desktop/imgs/{self._t}.png")
         plt.pause(0.1)
