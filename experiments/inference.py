@@ -8,6 +8,7 @@ from mfgrl.envs.mfgenv import MfgEnv
 
 # prepare config and load from checkpoint
 checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_000200"
+# checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_001000"
 config = (
     PPOConfig()
     .environment(

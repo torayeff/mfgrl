@@ -31,7 +31,7 @@ tuner = tune.Tuner(
     "PPO",
     param_space=config.to_dict(),
     run_config=air.RunConfig(
-        stop={"training_iteration": 200},
+        stop={"training_iteration": 1000},
         checkpoint_config=air.CheckpointConfig(checkpoint_frequency=10),
     ),
 )
