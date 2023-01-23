@@ -21,6 +21,7 @@ config = (
         },
     )
     .framework("torch")
+    .training(grad_clip=0.5)
     .rollouts(num_rollout_workers=1)
     .resources(num_gpus=0)
     .evaluation(evaluation_num_workers=1, evaluation_interval=5)
@@ -31,7 +32,7 @@ tuner = tune.Tuner(
     "PPO",
     param_space=config.to_dict(),
     run_config=air.RunConfig(
-        stop={"training_iteration": 1000},
+        stop={"timesteps_total": 500000},
         checkpoint_config=air.CheckpointConfig(checkpoint_frequency=10),
     ),
 )
