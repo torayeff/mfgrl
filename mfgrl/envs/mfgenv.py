@@ -86,6 +86,7 @@ class MfgEnv(gym.Env):
                 Observation, reward, terminated, truncated, info.
         """
         self._t += 1
+        reward = 0
         assert 0 <= action <= self.BUFFER_SIZE, "Invalid action"
 
         if self.buffer_idx < self.BUFFER_SIZE:
@@ -105,10 +106,22 @@ class MfgEnv(gym.Env):
         elif self.buffer_idx == self.BUFFER_SIZE:
             # check if the action was a final buy action
             # continue simulation until the end and accumulate rewards
+            info = {
+                "step_rewards": [],
+                "states": [],
+                "last_decision_action": action,
+                "msgs": []
+            }
+
             while not terminated:
-                reward += self.continue_production()
-                terminated, r, info = self._check_for_termination()
+                step_reward = self.continue_production()
+                reward += step_reward
+                terminated, r, term_info = self._check_for_termination()
                 reward += r
+
+                info["step_rewards"].append(step_reward)
+                info["states"].append(self._env_state.copy())
+                info["msgs"].append(term_info["msg"])
 
         # update total rewards
         self.total_rewards += reward
@@ -309,7 +322,7 @@ class MfgEnv(gym.Env):
             reward = 0
             terminated = True
         else:
-            info = {}
+            info = {"msg": ""}
             reward = 0
             terminated = False
 
