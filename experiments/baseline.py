@@ -5,7 +5,7 @@ import numpy as np
 
 # prepare environment
 env_config = {
-    "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
+    "data_file": pathlib.Path(__file__).parent.resolve() / "data/data5.json",
     "stochastic": True,
     "render_mode": "human",
 }

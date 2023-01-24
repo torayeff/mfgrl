@@ -15,7 +15,7 @@ config = (
     .environment(
         MfgEnv,
         env_config={
-            "data_file": pathlib.Path(__file__).parent.resolve() / "data.json",
+            "data_file": pathlib.Path(__file__).parent.resolve() / "data/data5.json",
             "stochastic": True,
             "render_mode": None,
         },
@@ -32,7 +32,7 @@ tuner = tune.Tuner(
     "PPO",
     param_space=config.to_dict(),
     run_config=air.RunConfig(
-        stop={"timesteps_total": 500000},
+        stop={"timesteps_total": 2 * 500000},
         checkpoint_config=air.CheckpointConfig(checkpoint_frequency=10),
     ),
 )
