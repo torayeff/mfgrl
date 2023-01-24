@@ -7,22 +7,7 @@ from mfgrl.envs.mfgenv import MfgEnv
 
 
 # prepare config and load from checkpoint
-# checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_000200"
-# checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_001000"
-# data 1
-# checkpoint_path = "/Users/torayeff/ray_results/PPO/PPO_MfgEnv_2cd9b_00000_0_2023-01-24_11-28-07/checkpoint_000125"
-
-# data 2
-# checkpoint_path = "/Users/torayeff/ray_results/PPO/PPO_MfgEnv_a99a8_00000_0_2023-01-24_12-07-24/checkpoint_000250"
-
-# data 3
-# checkpoint_path = "/Users/torayeff/ray_results/PPO/PPO_MfgEnv_f7eab_00000_0_2023-01-24_13-49-48/checkpoint_000250"
-
-# data 4
-# checkpoint_path = "/Users/torayeff/ray_results/PPO/PPO_MfgEnv_eb2a2_00000_0_2023-01-24_14-39-33/checkpoint_000250"
-
-# data 5
-# checkpoint_path = "/Users/torayeff/ray_results/PPO/PPO_MfgEnv_691f3_00000_0_2023-01-24_15-11-43/checkpoint_000250"
+checkpoint_path = "./checkpoints/PPO_MfgEnv_checkpoint_000500"
 
 config = (
     PPOConfig()

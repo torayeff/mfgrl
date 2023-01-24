@@ -1,6 +1,6 @@
 {
   "buffer_size": 10,
-  "demand": 2000,
+  "demand": 1000,
   "demand_time": 100,
   "configurations": {
     "Mfg0": {
