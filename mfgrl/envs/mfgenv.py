@@ -6,11 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "Computer Modern Serif"
-})
-
 
 class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
@@ -115,7 +110,7 @@ class MfgEnv(gym.Env):
                 "step_rewards": [],
                 "states": [],
                 "last_decision_action": action,
-                "msgs": []
+                "msgs": [],
             }
 
             while not terminated:
