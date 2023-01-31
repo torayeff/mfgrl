@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Computer Modern Serif"
+})
+
 
 class MfgEnv(gym.Env):
     metadata = {"render_modes": ["human"]}

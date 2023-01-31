@@ -21,7 +21,11 @@ steps = 0
 max_production_action = np.argmax(env.decode_obs(obs)["market_production_rates"])
 while True:
     steps += 1
-    action = max_production_action
+    # action = max_production_action
+    if steps < 10:
+        action = np.random.randint(0, 5)
+    else:
+        action = 5
     obs, reward, terminated, truncated, info = env.step(action)
     total_reward += reward
 
