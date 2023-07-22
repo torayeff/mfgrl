@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Torayev"
+  given-names: "Agajan"
+  orcid: "https://orcid.org/0000-0002-8141-5704"
+- family-names: "Peralta Abadia"
+  given-names: "Jose Joaquin "
+title: "mfgrl"
+version: 0.0.1
+date-released: 2023-01-31
+url: "https://github.com/torayeff/mfgrl"
